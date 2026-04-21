@@ -1,0 +1,34 @@
+#  Copyright (c) 2026. Programacion Cientifica, DISC, Antofagasta, Chile.
+
+import logging
+
+import coloredlogs
+from typeguard import typechecked
+
+
+@typechecked
+def configure_logging(level: int = logging.DEBUG) -> None:
+    """Configure the logging module."""
+    fmt = "%(asctime)s [%(levelname)8s] %(name)s:%(lineno)d (%(process)d/%(threadName)s) - %(message)s"
+    coloredlogs.install(
+        level=level,
+        fmt=fmt,
+        level_styles={
+            "DEBUG": {"color": "black", "bright": True},
+            "INFO": {"color": "green"},
+            "WARNING": {"color": "magenta"},
+            "ERROR": {"color": "red"},
+            "CRITICAL": {"color": "red", "bold": True},
+        },
+        field_styles={
+            "asctime": {"color": "yellow"},
+            "levelname": {"bold": True},
+            "name": {"color": "blue", "bold": True},
+            "lineno": {"color": "magenta"},
+            "process": {"color": "blue", "bold": True},
+            "threadName": {"color": "cyan"},
+            "message": {"color": "white"},
+
+        },
+        milliseconds=True,
+    )
