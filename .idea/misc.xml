@@ -3,7 +3,7 @@
   <component name="Black">
     <option name="sdkName" value="sciprog" />
   </component>
-  <component name="PyreflyConfiguration">
+  <component name="TyConfiguration">
     <option name="enabled" value="true" />
   </component>
 </project>
