@@ -1,8 +1,8 @@
 coloredlogs==15.0.1
 humanize==4.15.0
 prettytable==3.17.0
-pymupdf4llm==1.27.2.2
-pyrefly==0.62.0
+pymupdf4llm==1.27.2.3
+pyrefly==0.63.0
 spacy==3.8.14
-ty==0.0.32
+ty==0.0.33
 typeguard==4.5.1
