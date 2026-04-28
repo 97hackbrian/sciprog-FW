@@ -1,27 +1,37 @@
 #  Copyright (c) 2026. Programacion Cientifica, DISC, Antofagasta, Chile.
 import logging
+from typing import TypeAlias
 
 from prettytable import PrettyTable, HRuleStyle
 
 from benchmarking import benchmark  # ty:ignore[unresolved-import]
 from logger import configure_logging  # ty:ignore[unresolved-import]
 
+#
+Board: TypeAlias = list[list[int]]
 
-def show_board(board):
+
+def show_board(board: Board) -> None:
     """Show the board in the screen in a human readable format."""
     table = PrettyTable()
-    table.header = False
+
+    # number of colunmns
+    ncols = len(board[0]) if board else 0
+
+    # header
+    table.field_names = ["r\\c"] + [str(c) for c in range(ncols)]
     table.hrules = HRuleStyle.ALL
-    for row in board:
-        table.add_row([
-            "█" if cell == 1 else "·" for cell in row
-        ])
+
+    # populate the table
+    for r, row in enumerate(board):
+        table.add_row([str(r)] + ["█" if cell == 1 else "·" for cell in row])
     log.debug(f"\n{table}")
 
 
-def count_neighbours(board, row, column):
+def count_neighbours(board: Board, row: int, column: int) -> int:
     """Count the number of neighbouring cells in the board."""
-    sum = 0
+    total = 0
+
     # iterate over the 3x3 square around the cell
     for r in (range(row - 1, row + 2)):
         for c in (range(column - 1, column + 2)):
@@ -40,12 +50,12 @@ def count_neighbours(board, row, column):
 
             # count only the living cellsl
             if board[r][c] == 1:
-                sum += 1
+                total += 1
 
-    return sum
+    return total
 
 
-def evolve(board):
+def evolve(board: Board) -> Board:
     """Evolve the board."""
 
     # create a new board of the same size of board with all values in cero
@@ -80,7 +90,7 @@ def evolve(board):
     return next_board
 
 
-def main():
+def main() -> None:
     """The main function."""
     max_iterations = 10
 
@@ -94,6 +104,7 @@ def main():
     # show the initial state
     show_board(board)
 
+    # iterate over the board and evolve it
     for i in range(max_iterations):
         log.debug(f"-- iteration: {i + 1} {'-' * 60}")
         board = evolve(board)
