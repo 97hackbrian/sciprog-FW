@@ -55,6 +55,30 @@ def count_neighbours(board: Board, row: int, column: int) -> int:
     return total
 
 
+def expand(board: Board) -> Board:
+    """Expand the board so that all cells are neighbours."""
+    n_rows = len(board)
+    n_cols = len(board[0])
+
+    # the board expanded
+    expanded_board = []
+    for r in range(n_rows + 2):
+        # create the new row
+        new_row = []
+        for c in range(n_cols + 2):
+            # append each cell into the row
+            new_row.append(0)
+        # append to the new board the new row
+        expanded_board.append(new_row)
+
+    # copy the center board
+    for r in range(n_rows):
+        for c in range(n_cols):
+            expanded_board[r + 1][c + 1] = board[r][c]
+
+    return expanded_board
+
+
 def evolve(board: Board) -> Board:
     """Evolve the board."""
 
@@ -96,13 +120,18 @@ def main() -> None:
 
     # init -> board 3x3
     board = [
-        [0, 1, 0],
-        [1, 1, 0],
-        [1, 0, 1],
+        #[1, 1, 0],
+        [0, 1, 1],
+        # [0, 1, 0],
     ]
 
     # show the initial state
     show_board(board)
+
+    board = expand(board)
+    show_board(board)
+
+    return
 
     # iterate over the board and evolve it
     for i in range(max_iterations):
