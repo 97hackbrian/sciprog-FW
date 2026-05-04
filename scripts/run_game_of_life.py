@@ -3,6 +3,7 @@ import logging
 from typing import TypeAlias
 
 from prettytable import PrettyTable, HRuleStyle
+from tqdm import tqdm
 
 from benchmarking import benchmark  # ty:ignore[unresolved-import]
 from logger import configure_logging  # ty:ignore[unresolved-import]
@@ -79,8 +80,37 @@ def expand(board: Board) -> Board:
     return expanded_board
 
 
+def compact(board: Board) -> Board:
+    """Compact the board."""
+
+    # 1. remove the first row if all the values are zero
+    if all(c == 0 for c in board[0]):
+        # splice the first row
+        board = board[1:]
+
+    # 2. remove the last row if all the values are zero
+    if all(c == 0 for c in board[-1]):
+        # splice the last row
+        board = board[0:-1]
+
+    # 3. remove the first col if all the values are zero
+    if all(row[0] == 0 for row in board):
+        for row in board:
+            row.pop(0)
+
+    # 4. remove the last col if all the values are zero
+    if all(row[-1] == 0 for row in board):
+        for row in board:
+            row.pop(-1)
+
+    return board
+
+
 def evolve(board: Board) -> Board:
     """Evolve the board."""
+
+    # expand the board
+    board = expand(board)
 
     # create a new board of the same size of board with all values in cero
     next_board = [[0] * len(row) for row in board]
@@ -111,33 +141,33 @@ def evolve(board: Board) -> Board:
                 if neighbours == 3:
                     next_board[row][column] = 1
 
+    # remove the borders with all values in zero
+    next_board = compact(next_board)
+
     return next_board
 
 
 def main() -> None:
     """The main function."""
-    max_iterations = 10
+    max_iterations = 500
 
     # init -> board 3x3
     board = [
-        #[1, 1, 0],
+        [1, 1, 0],
         [0, 1, 1],
-        # [0, 1, 0],
+        [0, 1, 0],
     ]
 
     # show the initial state
     show_board(board)
 
-    board = expand(board)
-    show_board(board)
-
-    return
-
     # iterate over the board and evolve it
-    for i in range(max_iterations):
-        log.debug(f"-- iteration: {i + 1} {'-' * 60}")
+    for i in tqdm(range(max_iterations)):
+        # log.debug(f"-- iteration: {i + 1} {'-' * 60}")
         board = evolve(board)
-        show_board(board)
+
+    # show the last state
+    show_board(board)
 
 
 # call the main function
