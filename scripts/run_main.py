@@ -2,8 +2,8 @@
 
 import logging
 
-from benchmarking import benchmark
-from logger import configure_logging
+from benchmarking import benchmark  # ty:ignore[unresolved-import]
+from logger import configure_logging  # ty:ignore[unresolved-import]
 
 print("Testing")
 
