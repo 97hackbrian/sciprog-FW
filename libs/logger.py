@@ -9,10 +9,9 @@ from typeguard import typechecked
 @typechecked
 def configure_logging(level: int = logging.DEBUG) -> None:
     """Configure the logging module."""
-    fmt = "%(asctime)s [%(levelname)8s] %(name)s:%(lineno)d (%(process)d/%(threadName)s) - %(message)s"
     coloredlogs.install(
         level=level,
-        fmt=fmt,
+        fmt="%(asctime)s [%(levelname)8s] %(name)s:%(lineno)d (%(process)d/%(threadName)s) - %(message)s",
         level_styles={
             "DEBUG": {"color": "black", "bright": True},
             "INFO": {"color": "green"},
@@ -32,3 +31,6 @@ def configure_logging(level: int = logging.DEBUG) -> None:
         },
         milliseconds=True,
     )
+
+    # decrease the level of logger in external libraries
+    logging.getLogger("PIL").setLevel(logging.WARNING)

@@ -1,14 +1,17 @@
 #  Copyright (c) 2026. Programacion Cientifica, DISC, Antofagasta, Chile.
 import logging
+from pathlib import Path
 from typing import TypeAlias
 
+import imageio
+import numpy as np
 from prettytable import PrettyTable, HRuleStyle
 from tqdm import tqdm
 
 from benchmarking import benchmark  # ty:ignore[unresolved-import]
 from logger import configure_logging  # ty:ignore[unresolved-import]
 
-#
+# The board.
 Board: TypeAlias = list[list[int]]
 
 
@@ -147,6 +150,22 @@ def evolve(board: Board) -> Board:
     return next_board
 
 
+def save_board(board: Board, filename: Path, cell_size: int = 2) -> None:
+    """Save the board into a image."""
+
+    # list[list[int]] to numpy of uint8 (0 -> 255)
+    arr = np.array(board, dtype=np.uint8)
+
+    # scale up: kronecker product 1 become cell_size x cell_size of 1s.
+    arr = np.kron(arr, np.ones((cell_size, cell_size), dtype=np.uint8))
+
+    # invert the values: 1=black, 0=white
+    image = np.where(arr == 1, 0, 255).astype(np.uint8)
+
+    # save image
+    imageio.imwrite(filename, image)
+
+
 def main() -> None:
     """The main function."""
 
@@ -164,9 +183,12 @@ def main() -> None:
     show_board(board)
 
     # iterate over the board and evolve it
-    for i in tqdm(range(max_iterations), ncols=160, desc="Gaming"):
+    for i in tqdm(range(max_iterations), ncols=180, desc="Gaming"):
         # log.debug(f"-- iteration: {i + 1} {'-' * 60}")
         board = evolve(board)
+
+        # save the board into a image
+        save_board(board, output_dir / f"board-{i:05d}.png", cell_size=10)
 
     # show the last state
     show_board(board)
@@ -178,6 +200,15 @@ if __name__ == '__main__':
     configure_logging(logging.DEBUG)
     # get the main logger
     log = logging.getLogger(__name__)
+
+    # get the root directory
+    root_dir = Path(__file__).resolve().parent.parent
+    log.debug(f"root_dir: {root_dir}")
+
+    # get the output directory
+    output_dir = root_dir / "output"
+    log.debug(f"output_dir: {output_dir}")
+
     # measure time
     with benchmark("main", log):
         log.info("️🏎️ starting ..")

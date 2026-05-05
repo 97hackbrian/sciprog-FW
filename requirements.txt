@@ -1,5 +1,6 @@
 coloredlogs==15.0.1
 humanize==4.15.0
+imageio==2.37.3
 prettytable==3.17.0
 pymupdf4llm==1.27.2.3
 pyrefly==0.63.1
