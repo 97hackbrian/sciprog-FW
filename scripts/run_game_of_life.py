@@ -149,6 +149,8 @@ def evolve(board: Board) -> Board:
 
 def main() -> None:
     """The main function."""
+
+    # the max number of iterations
     max_iterations = 500
 
     # init -> board 3x3
@@ -162,7 +164,7 @@ def main() -> None:
     show_board(board)
 
     # iterate over the board and evolve it
-    for i in tqdm(range(max_iterations)):
+    for i in tqdm(range(max_iterations), ncols=160, desc="Gaming"):
         # log.debug(f"-- iteration: {i + 1} {'-' * 60}")
         board = evolve(board)
 
