@@ -83,7 +83,7 @@ class GameOfLife:
     def __str__(self) -> str:
         """Show the board in ascii using PrettyTable."""
         table = PrettyTable()
-        table.field_names = [f"Generation nº {self.generation} -> pop={self.population()}"]
+        table.field_names = [f"Gen={self.generation} -> pop={self.population()}"]
 
         for r, row in enumerate(self.board):
             str_row = " ".join(
@@ -109,12 +109,20 @@ class GameOfLife:
         self.board = self.board[rows[0]:rows[-1] + 1, cols[0]:cols[-1] + 1]
 
     def evolve(self) -> None:
-        """Evolve the board."""
+        """Advance the board by one generation using Conway's Game of Life rules."""
 
-        # expand the board 1 row/col around the board
+        # 1) Expand the current board with a 1-cell dead border.
+        # - New live cells can appear at the edges.
+        # - Without padding, births outside the current bounds would be lost.
         self.expand_board()
 
-        # apply the convolve over the board
+        # 2) Count live neighbors for every cell using a convolution kernel.
+        # The kernel has 1s around the center and 0 at the center:
+        #   [1, 1, 1]
+        #   [1, 0, 1]
+        #   [1, 1, 1]
+        # This sums the 8 surrounding cells while ignoring the cell itself.
+        # mode="constant", cval=0 means cells beyond the board are treated as DEAD.
         neighbors = convolve(
             self.board,
             self.KERNEL,
@@ -122,27 +130,42 @@ class GameOfLife:
             cval=self.DEAD,
         )
 
-        # determine which cells are alive?
+        # 3) Build a boolean mask of cells that are currently alive.
+        # True  -> currently ALIVE
+        # False -> currently DEAD
         alive = self.board == self.ALIVE
 
-        # apply the rules of Game of Life
+        # 4) Apply Conway's rules in vectorized form:
+        #
+        #   Survival: an ALIVE cell stays alive if it has 2 or 3 neighbors.
+        #   Birth:    a DEAD  cell becomes alive if it has exactly 3 neighbors.
+        #   Death:    all other cases become/stay dead.
+        #
+        # We compute each rule as a boolean mask, then combine them.
+        survive_mask = alive & ((neighbors == 2) | (neighbors == 3))
+        birth_mask = ~alive & (neighbors == 3)  # NOTE: use 3, not 2
+
+        # 5) Create the next generation:
+        # - Cells matching survive_mask OR birth_mask become ALIVE (1).
+        # - Everything else becomes DEAD (0).
+        # Cast back to uint8 to keep board storage compact and consistent.
         self.board = np.where(
-            (alive & ((neighbors == 2) | (neighbors == 3))) | (~alive & (neighbors == 2)), self.ALIVE, self.DEAD,
+            survive_mask | birth_mask,
+            self.ALIVE,
+            self.DEAD,
         ).astype(np.uint8)
 
-        # compact the board
+        # 6) Remove fully dead outer rows/columns to keep the board compact.
+        # This avoids unbounded growth of empty borders over time.
         self.compact()
 
-        # increments the generation
+        # 7) Increase generation counter after the full transition is complete.
         self.generation += 1
-
-        # create a new board of the same size of board with all values in cero
-        # next_board = np.zeros_like(self.board, dtype=np.uint8)
 
 
 def main():
     # the max number of iterations
-    max_iterations = 500
+    max_iterations = 5000
 
     # init -> board 3x3
     board = [
@@ -158,9 +181,8 @@ def main():
     # iterate over the board and evolve it
     for i in tqdm(range(max_iterations), ncols=180, desc="Gaming"):
         gof.evolve()
-        # log.debug(f"board:\n{gof}")
 
-    # log.debug(f"board:\n{gof}")
+    log.debug(f"board:\n{gof}")
 
 
 # call the main function
