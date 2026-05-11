@@ -6,4 +6,4 @@ dependencies:
   - python=3.13.13  # https://anaconda.org/channels/main/packages/python/overview
   - pip=26.1.1      # https://anaconda.org/channels/conda-forge/packages/pip/overview
   - pip:
-      - uv==0.11.9
+      - uv==0.11.13

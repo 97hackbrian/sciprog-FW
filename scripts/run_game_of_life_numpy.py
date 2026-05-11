@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import ClassVar
 
 import numpy as np
+from prettytable import PrettyTable
+from scipy.ndimage import convolve
+from tqdm import tqdm
 
 from benchmarking import benchmark  # ty:ignore[unresolved-import]
 from logger import configure_logging  # ty:ignore[unresolved-import]
@@ -32,6 +35,15 @@ class GameOfLife:
     # constants
     ALIVE: ClassVar[int] = 1
     DEAD: ClassVar[int] = 0
+
+    # kernel to count the neighbors
+    KERNEL = np.array(
+        [
+            [1, 1, 1],
+            [1, 0, 1],
+            [1, 1, 1],
+        ]
+    )
 
     def __post_init__(self) -> None:
         """Post-initialization check for the Game of Life class"""
@@ -69,11 +81,69 @@ class GameOfLife:
         return cls(board=np.array(initial_state))
 
     def __str__(self) -> str:
-        # TODO: Use the PrettyTable to show the board in ascii.
-        return "Hi Game of Life"
+        """Show the board in ascii using PrettyTable."""
+        table = PrettyTable()
+        table.field_names = [f"Generation nº {self.generation} -> pop={self.population()}"]
+
+        for r, row in enumerate(self.board):
+            str_row = " ".join(
+                self.alive_cell if cell == self.ALIVE else self.dead_cell for cell in row
+            )
+            table.add_row([str_row])
+        return str(table)
+
+    def population(self) -> int:
+        """Return the population of the board."""
+        return np.sum(self.board)
+
+    def expand_board(self) -> None:
+        """Expand the board with a border of dead cells."""
+        self.board = np.pad(self.board, pad_width=1, mode='constant', constant_values=self.DEAD)
+
+    def compact(self) -> None:
+        """Compact the board."""
+        rows = np.where(np.any(self.board, axis=1))[0]
+        cols = np.where(np.any(self.board, axis=0))[0]
+        if rows.size == 0 or cols.size == 0:
+            return
+        self.board = self.board[rows[0]:rows[-1] + 1, cols[0]:cols[-1] + 1]
+
+    def evolve(self) -> None:
+        """Evolve the board."""
+
+        # expand the board 1 row/col around the board
+        self.expand_board()
+
+        # apply the convolve over the board
+        neighbors = convolve(
+            self.board,
+            self.KERNEL,
+            mode="constant",
+            cval=self.DEAD,
+        )
+
+        # determine which cells are alive?
+        alive = self.board == self.ALIVE
+
+        # apply the rules of Game of Life
+        self.board = np.where(
+            (alive & ((neighbors == 2) | (neighbors == 3))) | (~alive & (neighbors == 2)), self.ALIVE, self.DEAD,
+        ).astype(np.uint8)
+
+        # compact the board
+        self.compact()
+
+        # increments the generation
+        self.generation += 1
+
+        # create a new board of the same size of board with all values in cero
+        # next_board = np.zeros_like(self.board, dtype=np.uint8)
 
 
 def main():
+    # the max number of iterations
+    max_iterations = 500
+
     # init -> board 3x3
     board = [
         [1, 1, 0],
@@ -83,8 +153,14 @@ def main():
 
     # list[list[int]] -> GameOfLife
     gof = GameOfLife.from_list(board)
+    log.debug(f"initial:\n{gof}")
 
-    log.debug(f"gof: {gof}")
+    # iterate over the board and evolve it
+    for i in tqdm(range(max_iterations), ncols=180, desc="Gaming"):
+        gof.evolve()
+        # log.debug(f"board:\n{gof}")
+
+    # log.debug(f"board:\n{gof}")
 
 
 # call the main function
