@@ -8,11 +8,9 @@ from datetime import timedelta
 from typing import Generator
 
 import humanize
-from typeguard import typechecked
 
 
 @contextmanager
-@typechecked
 def benchmark(
         operation_name: str | None = None,
         log: logging.Logger | None = None,

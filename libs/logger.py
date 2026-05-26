@@ -3,10 +3,8 @@
 import logging
 
 import coloredlogs
-from typeguard import typechecked
 
 
-@typechecked
 def configure_logging(level: int = logging.DEBUG) -> None:
     """Configure the logging module."""
     coloredlogs.install(
