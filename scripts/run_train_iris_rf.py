@@ -15,18 +15,19 @@ from logger import configure_logging  # ty:ignore[unresolved-import]
 
 
 def visualize_random_forest(model: RandomForestClassifier, X):
-    plt.figure(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(10, 10))
     plot_tree(
         model.estimators_[0],
         feature_names=X.columns.tolist(),
+        class_names=[str(class_name) for class_name in model.classes_],
         filled=True,
         rounded=True,
         fontsize=10,
+        ax=ax,
     )
-    plt.tight_layout()
+    fig.tight_layout()
     plt.show()
-    plt.close()
-
+    plt.close(fig)
 
 
 def main():
@@ -39,19 +40,25 @@ def main():
     y = iris.data.targets.squeeze("columns")
 
     # divide the dataset in train and test (20%)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y,  #
+    )
     log.debug(f"X_train: {len(X_train)}, X_test: {len(X_test)}, y_train: {len(y_train)}, y_test: {len(y_test)}")
 
     # training the classifier
     rfc = RandomForestClassifier(random_state=42, max_depth=2)
-    with benchmark("RFC training"):
-        log.debug("RFC training ..")
+    with benchmark("training random forest", log):
+        log.debug("Training ..")
         rfc.fit(X_train, y_train)
 
     # testing the model
     y_pred = rfc.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
-    log.debug(f"accuracy: {accuracy:.3f}")
+    log.debug(f"accuracy: {accuracy:.2f}")
 
     # save the model in pickle!
     with open(output_dir / "iris_rf.pkl", "wb") as f:
