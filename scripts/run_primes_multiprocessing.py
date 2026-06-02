@@ -1,6 +1,7 @@
 #  Copyright (c) 2026. Programacion Cientifica, DISC, Antofagasta, Chile.
 import logging
 import multiprocessing
+import os
 from pathlib import Path
 
 from numba.core.decorators import njit
@@ -40,18 +41,26 @@ def count_primes_in_range(the_range: tuple[int, int]) -> int:
 
 
 def main() -> None:
-    n = 10 * 1000 * 1000
+    n = 50 * 1000 * 1000
     log.debug(f"Counting primes from 1 to {n:,} ..")
 
+    # serial
+    primes = 0
+    with benchmark("serial", log):
+        for i in tqdm(range(n), ncols=250, desc="counting primes (serial)"):
+            if is_prime(i):
+                primes += 1
+    log.debug(f"primes: {primes:,} (serial)")
+
     # retrieve the number of cores
-    num_cores = 22  # os.cpu_count()
+    num_cores = os.cpu_count() or 1
     log.debug(f"num_cores: {num_cores}.")
 
     # the number of work to do
-    num_chunks = num_cores * 20
+    num_chunks = num_cores * 10
 
     # the size of each work
-    chunk_size = n // num_cores
+    chunk_size = n // num_chunks
 
     # divide the space in (start, end)
     ranges = []
@@ -63,19 +72,17 @@ def main() -> None:
             end = (i + 1) * chunk_size
         ranges.append((start, end))
 
-    for start, end in ranges:
-        log.debug(f"range: from {start} -> {end}")
-
     # the pool of workers
-    with multiprocessing.Pool(num_cores) as pool:
-        result = list(tqdm(
-            pool.imap(count_primes_in_range, ranges),
-            total=len(ranges),
-            ncols=250,
-            desc="count primes"
-        ))
-    primes = sum(result)
-    log.debug(f"primes: {primes:,}")
+    with benchmark("multiprocessing", log):
+        with multiprocessing.Pool(num_cores) as pool:
+            result = list(tqdm(
+                pool.imap(count_primes_in_range, ranges),
+                total=len(ranges),
+                ncols=250,
+                desc="count primes (multiprocessing)",
+            ))
+        primes = sum(result)
+        log.debug(f"primes: {primes:,} (mp)")
 
 
 # call the main function
