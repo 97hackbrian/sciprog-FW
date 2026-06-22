@@ -32,8 +32,14 @@ def configure_logging(level: int = logging.DEBUG) -> None:
 
     # decrease the level of logger in external libraries
     logging.getLogger("PIL").setLevel(logging.WARNING)
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
     logging.getLogger("cmdstanpy").setLevel(logging.WARNING)
+    logging.getLogger("graphviz._tools").setLevel(logging.WARNING)
+    logging.getLogger("httpcore.connection").setLevel(logging.WARNING)
+    logging.getLogger("httpcore.http11").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("matplotlib.colorbar").setLevel(logging.WARNING)
     logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
     logging.getLogger("matplotlib.pyplot").setLevel(logging.WARNING)
     logging.getLogger("numba.core").setLevel(logging.WARNING)
+    logging.getLogger("websockets.client").setLevel(logging.WARNING)
