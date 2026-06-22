@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.13.13  # https://anaconda.org/channels/main/packages/python/overview
+  - python=3.13.14  # https://anaconda.org/channels/main/packages/python/overview
   - pip=26.1.2      # https://anaconda.org/channels/conda-forge/packages/pip/overview
   - pip:
-      - uv==0.11.21 # https://pypi.org/project/uv/
+      - uv==0.11.23 # https://pypi.org/project/uv/
