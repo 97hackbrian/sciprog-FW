@@ -1,10 +1,15 @@
-#  Copyright (c) 2026. Programacion Cientifica, DISC, Antofagasta, Chile.
+"""Lightweight timing utility.
+
+Adapted from the department's own reference pattern
+(github.com/97hackbrian/sciprog-FW, branch `finalwork`, libs/benchmarking.py).
+"""
+
+from __future__ import annotations
 
 import datetime
 import logging
 import time
 from contextlib import contextmanager
-from datetime import timedelta
 from typing import Generator
 
 import humanize
@@ -12,28 +17,16 @@ import humanize
 
 @contextmanager
 def benchmark(
-        operation_name: str | None = None,
-        log: logging.Logger | None = None,
+    operation_name: str | None = None, log: logging.Logger | None = None
 ) -> Generator[None, None, None]:
     """Measure elapsed time for a code block and log a human-readable duration."""
-
-    # the log
     log = log or logging.getLogger(__name__)
-
-    # start time
-    start_ns: int = time.perf_counter_ns()
-
+    start_ns = time.perf_counter_ns()
     try:
         yield
     finally:
-        elapsed_ns: int = time.perf_counter_ns() - start_ns
-        delta: timedelta = datetime.timedelta(seconds=elapsed_ns / 1_000_000_000)
-
-        human_time: str = humanize.precisedelta(
-            delta, minimum_unit="microseconds", format="%.2f"
-        )
-
-        if operation_name:
-            log.debug(f"⏱️{operation_name} executed in {human_time}")
-        else:
-            log.debug(f"⏱️executed in {human_time}")
+        elapsed_ns = time.perf_counter_ns() - start_ns
+        delta = datetime.timedelta(seconds=elapsed_ns / 1_000_000_000)
+        human_time = humanize.precisedelta(delta, minimum_unit="microseconds", format="%.2f")
+        label = f"{operation_name} " if operation_name else ""
+        log.debug(f"\u23f1\ufe0f {label}executed in {human_time}")

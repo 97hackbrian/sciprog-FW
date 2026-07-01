@@ -1,216 +1,133 @@
-#  Copyright (c) 2026. Programacion Cientifica, DISC, Antofagasta, Chile.
+"""Command-line entrypoint for the Game of Life."""
+
+import argparse
 import logging
 from pathlib import Path
-from typing import TypeAlias
 
-import imageio
-import numpy as np
-from prettytable import PrettyTable, HRuleStyle
-from tqdm import tqdm
+from sqlalchemy.orm import Session
 
-from benchmarking import benchmark  # ty:ignore[unresolved-import]
-from logger import configure_logging  # ty:ignore[unresolved-import]
+from game_of_life.config import SimulationConfig
+from game_of_life.core.engine import SimulationEngine
+from game_of_life.gui.app import GameOfLifeApp
+from game_of_life.logging_config import configure_logging
+from game_of_life.persistence.database import (
+    BatchedCommitter,
+    create_run_record,
+    get_engine,
+    init_db,
+)
+from game_of_life.persistence.loader import load_initial_state
+from game_of_life.persistence.models import IterationRecord
 
-# The board.
-Board: TypeAlias = list[list[int]]
-
-
-def show_board(board: Board) -> None:
-    """Show the board in the screen in a human readable format."""
-    table = PrettyTable()
-
-    # number of colunmns
-    ncols = len(board[0]) if board else 0
-
-    # header
-    table.field_names = ["r\\c"] + [str(c) for c in range(ncols)]
-    table.hrules = HRuleStyle.ALL
-
-    # populate the table
-    for r, row in enumerate(board):
-        table.add_row([str(r)] + ["█" if cell == 1 else "·" for cell in row])
-    log.debug(f"\n{table}")
+log = logging.getLogger(__name__)
 
 
-def count_neighbours(board: Board, row: int, column: int) -> int:
-    """Count the number of neighbouring cells in the board."""
-    total = 0
+def run_headless(engine: SimulationEngine, db_session: Session, run_id: int) -> None:
+    """Run the simulation without the GUI, saving to database."""
+    log.info("Starting headless simulation loop...")
+    committer = BatchedCommitter(db_session, batch_size=25)
 
-    # iterate over the 3x3 square around the cell
-    for r in (range(row - 1, row + 2)):
-        for c in (range(column - 1, column + 2)):
+    try:
+        while True:
+            result = engine.step()
 
-            # the center cell can't be counted
-            if r == row and c == column:
-                continue
+            record = IterationRecord(
+                run_id=run_id,
+                iteration_number=result.iteration,
+                live_cells=result.live_cells,
+                dead_cells=result.dead_cells,
+                execution_time_ms=result.execution_time_ms,
+            )
+            committer.add(record)
 
-            # outside the board by row
-            if r < 0 or r >= len(board):
-                continue
+            if result.iteration % 100 == 0:
+                log.info(f"Iteration {result.iteration}: {result.live_cells} live cells")
 
-            # outside the board by col
-            if c < 0 or c >= len(board[r]):
-                continue
+            if result.is_stable:
+                log.info(f"Simulation stopped at iteration {result.iteration} due to stability.")
+                break
 
-            # count only the living cellsl
-            if board[r][c] == 1:
-                total += 1
-
-    return total
-
-
-def expand(board: Board) -> Board:
-    """Expand the board so that all cells are neighbours."""
-    n_rows = len(board)
-    n_cols = len(board[0])
-
-    # the board expanded
-    expanded_board = []
-    for r in range(n_rows + 2):
-        # create the new row
-        new_row = []
-        for c in range(n_cols + 2):
-            # append each cell into the row
-            new_row.append(0)
-        # append to the new board the new row
-        expanded_board.append(new_row)
-
-    # copy the center board
-    for r in range(n_rows):
-        for c in range(n_cols):
-            expanded_board[r + 1][c + 1] = board[r][c]
-
-    return expanded_board
-
-
-def compact(board: Board) -> Board:
-    """Compact the board."""
-
-    # 1. remove the first row if all the values are zero
-    if all(c == 0 for c in board[0]):
-        # splice the first row
-        board = board[1:]
-
-    # 2. remove the last row if all the values are zero
-    if all(c == 0 for c in board[-1]):
-        # splice the last row
-        board = board[0:-1]
-
-    # 3. remove the first col if all the values are zero
-    if all(row[0] == 0 for row in board):
-        for row in board:
-            row.pop(0)
-
-    # 4. remove the last col if all the values are zero
-    if all(row[-1] == 0 for row in board):
-        for row in board:
-            row.pop(-1)
-
-    return board
-
-
-def evolve(board: Board) -> Board:
-    """Evolve the board."""
-
-    # expand the board
-    board = expand(board)
-
-    # create a new board of the same size of board with all values in cero
-    next_board = [[0] * len(row) for row in board]
-
-    # iterate over the whole board
-    for row in range(len(board)):
-        for column in range(len(board[row])):
-
-            # count the neighbours
-            neighbours = count_neighbours(board, row, column)
-            # log.debug(f"neighbours: {row},{column} -> {neighbours}")
-
-            # it's alive!
-            if board[row][column] == 1:
-                # 1. survival
-                if neighbours == 2 or neighbours == 3:
-                    next_board[row][column] = 1
-                    continue
-                # 2. death by isolation
-                if neighbours < 2:
-                    next_board[row][column] = 0
-                    continue
-                # 3. death by overcrowding
-                if neighbours > 3:
-                    next_board[row][column] = 0
-            else:
-                # it's dead!
-                if neighbours == 3:
-                    next_board[row][column] = 1
-
-    # remove the borders with all values in zero
-    next_board = compact(next_board)
-
-    return next_board
-
-
-def save_board(board: Board, filename: Path, cell_size: int = 2) -> None:
-    """Save the board into a image."""
-
-    # list[list[int]] to numpy of uint8 (0 -> 255)
-    arr = np.array(board, dtype=np.uint8)
-
-    # scale up: kronecker product 1 become cell_size x cell_size of 1s.
-    arr = np.kron(arr, np.ones((cell_size, cell_size), dtype=np.uint8))
-
-    # invert the values: 1=black, 0=white
-    image = np.where(arr == 1, 0, 255).astype(np.uint8)
-
-    # save image
-    imageio.imwrite(filename, image)
+    except KeyboardInterrupt:
+        log.info("Simulation stopped by user.")
+    finally:
+        committer.commit()
+        log.info("Database records committed. Exiting.")
 
 
 def main() -> None:
-    """The main function."""
+    """Entry point for the Game of Life CLI."""
+    parser = argparse.ArgumentParser(description="Conway's Game of Life")
+    parser.add_argument(
+        "--initial", type=Path, default=Path("initial.pkl"), help="Path to initial state pickle"
+    )
+    parser.add_argument("--config", type=Path, default=None, help="Path to config yaml")
+    parser.add_argument("--headless", action="store_true", help="Run without GUI")
+    args = parser.parse_args()
 
-    # the max number of iterations
-    max_iterations = 500
+    # Load configuration
+    config = SimulationConfig.load(args.config)
 
-    # init -> board 3x3
-    board = [
-        [1, 1, 0],
-        [0, 1, 1],
-        [0, 1, 0],
-    ]
+    # Configure logging
+    log_dir = Path("logs")
+    configure_logging(level=config.log_level, log_dir=log_dir)
 
-    # show the initial state
-    show_board(board)
+    log.info("Initializing Game of Life...")
 
-    # iterate over the board and evolve it
-    for i in tqdm(range(max_iterations), ncols=180, desc="Gaming"):
-        # log.debug(f"-- iteration: {i + 1} {'-' * 60}")
-        board = evolve(board)
+    # Load initial state
+    try:
+        initial_state = load_initial_state(args.initial)
+    except Exception as e:
+        log.error(f"Failed to load initial state: {e}")
+        return
 
-        # save the board into a image
-        save_board(board, output_dir / f"board-{i:05d}.png", cell_size=10)
+    # Setup database
+    db_engine = get_engine(config.db_path)
+    init_db(db_engine)
 
-    # show the last state
-    show_board(board)
+    # Create simulation engine
+    sim_engine = SimulationEngine(config=config, initial=initial_state)
+
+    # We need a db session to persist data
+    with Session(db_engine) as session:
+        # Create run record
+        run_record = create_run_record(
+            session, config, initial_state.shape[0], initial_state.shape[1], str(args.initial)
+        )
+        log.info(f"Created simulation run record {run_record.id}")
+
+        if args.headless:
+            run_headless(sim_engine, session, run_record.id)
+        else:
+            log.info("Starting GUI...")
+            app = GameOfLifeApp(engine=sim_engine, config=config, initial_state=initial_state)
+
+            # We persist execution records in GUI mode via a monkeypatch.
+            committer = BatchedCommitter(session, batch_size=25)
+
+            def persist_result(result):
+                record = IterationRecord(
+                    run_id=run_record.id,
+                    iteration_number=result.iteration,
+                    live_cells=result.live_cells,
+                    dead_cells=result.dead_cells,
+                    execution_time_ms=result.execution_time_ms,
+                )
+                committer.add(record)
+
+            # Monkeypatch the engine's step temporarily to hook it
+            orig_step = sim_engine.step
+
+            def hooked_step():
+                res = orig_step()
+                persist_result(res)
+                return res
+
+            sim_engine.step = hooked_step
+
+            app.run()
+            committer.commit()
+            log.info("GUI closed. Database records committed.")
 
 
-# call the main function
-if __name__ == '__main__':
-    # configure the logging
-    configure_logging(logging.DEBUG)
-    # get the main logger
-    log = logging.getLogger(__name__)
-
-    # get the root directory
-    root_dir = Path(__file__).resolve().parent.parent
-    log.debug(f"root_dir: {root_dir}")
-
-    # get the output directory
-    output_dir = root_dir / "output"
-    log.debug(f"output_dir: {output_dir}")
-
-    # measure time
-    with benchmark("main", log):
-        log.info("️🏎️ starting ..")
-        main()
-        log.info("️🏁 done.")
+if __name__ == "__main__":
+    main()
