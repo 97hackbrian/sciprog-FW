@@ -1,0 +1,8 @@
+boundary_mode: TOROIDAL
+target_generations_per_second: 10.0
+multiprocessing_threshold_cells: 10000
+n_workers: 4
+enable_extended_pattern_catalog: true
+pattern_detection_interval: 1
+db_path: data/gol.sqlite
+log_level: 20
