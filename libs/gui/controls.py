@@ -1,8 +1,10 @@
 """GUI Controls for the Game of Life."""
 
-import dearpygui.dearpygui as dpg
+from typing import Any
 
-from game_of_life.config import BoundaryMode
+import dearpygui.dearpygui as dpg  # type: ignore[import-untyped]
+
+from libs.config import BoundaryMode
 
 
 class Controls:
@@ -11,12 +13,12 @@ class Controls:
     def __init__(
         self,
         parent: int | str,
-        on_play_pause,
-        on_step,
-        on_reset,
-        on_speed_change,
-        on_boundary_change,
-    ):
+        on_play_pause: Any,
+        on_step: Any,
+        on_reset: Any,
+        on_speed_change: Any,
+        on_boundary_change: Any,
+    ) -> None:
         self.on_play_pause = on_play_pause
         self.on_step = on_step
         self.on_reset = on_reset
@@ -48,9 +50,9 @@ class Controls:
             dpg.add_separator()
             dpg.add_text("Detected Patterns:")
             self.pattern_listbox = dpg.add_listbox(items=[], width=-1, num_items=6)
-            self._pattern_items = []
+            self._pattern_items: list[str] = []
 
-    def _handle_play_pause(self, sender, app_data, user_data) -> None:
+    def _handle_play_pause(self, sender: Any, app_data: Any, user_data: Any) -> None:
         is_playing = self.on_play_pause()
         dpg.configure_item(self.btn_play, label="Pause" if is_playing else "Play")
 
@@ -58,7 +60,7 @@ class Controls:
         """Force UI to display 'Play' because simulation was paused externally."""
         dpg.configure_item(self.btn_play, label="Play")
 
-    def add_patterns(self, iteration: int, patterns: list) -> None:
+    def add_patterns(self, iteration: int, patterns: list[Any]) -> None:
         """Add newly detected patterns to the scrolling log."""
         if not patterns:
             return

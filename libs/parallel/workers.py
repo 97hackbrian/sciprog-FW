@@ -2,14 +2,15 @@
 
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing.shared_memory import SharedMemory
+from typing import Any
 
 import numpy as np
 
-from game_of_life.config import BoundaryMode
-from game_of_life.core.rules import apply_rules, count_neighbors
+from libs.config import BoundaryMode
+from libs.core.rules import apply_rules, count_neighbors
 
 # Global state for worker processes
-_worker_state = {}
+_worker_state: dict[str, Any] = {}
 
 
 def _init_worker(

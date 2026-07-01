@@ -1,19 +1,22 @@
 """Main GUI application."""
 
 import time
+from typing import Any
 
-import dearpygui.dearpygui as dpg
+import dearpygui.dearpygui as dpg  # type: ignore[import-untyped]
 
-from game_of_life.config import BoundaryMode, SimulationConfig
-from game_of_life.core.engine import SimulationEngine
-from game_of_life.gui.controls import Controls
-from game_of_life.gui.views import GridView, StatsView
+from libs.config import BoundaryMode, SimulationConfig
+from libs.core.engine import SimulationEngine
+from libs.gui.controls import Controls
+from libs.gui.views import GridView, StatsView
 
 
 class GameOfLifeApp:
     """Dear PyGui application for Game of Life."""
 
-    def __init__(self, engine: SimulationEngine, config: SimulationConfig, initial_state):
+    def __init__(
+        self, engine: SimulationEngine, config: SimulationConfig, initial_state: Any
+    ) -> None:
         self.engine = engine
         self.config = config
         self.initial_state = initial_state

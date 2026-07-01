@@ -4,10 +4,10 @@ import logging
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.ndimage import find_objects, label
+from scipy.ndimage import find_objects, label  # type: ignore[import-untyped]
 from typeguard import typechecked
 
-from game_of_life.patterns.catalog import CATALOG
+from libs.patterns.catalog import CATALOG
 
 log = logging.getLogger(__name__)
 

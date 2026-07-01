@@ -28,12 +28,12 @@ python scripts/generate_initial_state.py --pattern random --density 0.3 --rows 5
 
 Run the GUI simulation:
 ```bash
-python -m game_of_life.cli --initial initial.pkl
+python -m scripts.run_game_of_life --initial initial.pkl
 ```
 
 Run headlessly (e.g. for CI or data collection):
 ```bash
-python -m game_of_life.cli --initial initial.pkl --headless
+python -m scripts.run_game_of_life --initial initial.pkl --headless
 ```
 
 ## Architecture

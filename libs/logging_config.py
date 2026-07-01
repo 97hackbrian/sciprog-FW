@@ -11,7 +11,7 @@ import logging
 import logging.handlers
 from pathlib import Path
 
-import coloredlogs
+import coloredlogs  # type: ignore[import-untyped]
 from typeguard import typechecked
 
 _LOG_FORMAT = (

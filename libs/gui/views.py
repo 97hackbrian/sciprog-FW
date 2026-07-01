@@ -1,6 +1,6 @@
 """Dear PyGui views for the Game of Life."""
 
-import dearpygui.dearpygui as dpg
+import dearpygui.dearpygui as dpg  # type: ignore[import-untyped]
 import numpy as np
 
 

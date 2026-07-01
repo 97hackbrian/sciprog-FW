@@ -5,7 +5,7 @@ from enum import Enum, auto
 
 from typeguard import typechecked
 
-from game_of_life.patterns.rle import parse_rle
+from libs.patterns.rle import parse_rle
 
 
 class PatternCategory(Enum):

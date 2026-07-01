@@ -1,10 +1,10 @@
 """Rule evaluation and neighbor counting for the Game of Life."""
 
 import numpy as np
-from scipy.ndimage import convolve
+from scipy.ndimage import convolve  # type: ignore[import-untyped]
 from typeguard import typechecked
 
-from game_of_life.config import BoundaryMode
+from libs.config import BoundaryMode
 
 # 3x3 kernel, center is 0 so a cell does not count itself as a neighbor
 NEIGHBOR_KERNEL: np.ndarray = np.array(
@@ -27,7 +27,9 @@ def count_neighbors(grid_array: np.ndarray, boundary: BoundaryMode) -> np.ndarra
         mode = "constant"
         cval = 0
 
-    return convolve(grid_array, NEIGHBOR_KERNEL, mode=mode, cval=cval)
+    from typing import cast
+
+    return cast(np.ndarray, convolve(grid_array, NEIGHBOR_KERNEL, mode=mode, cval=cval))
 
 
 @typechecked

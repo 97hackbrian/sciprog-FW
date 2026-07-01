@@ -2,22 +2,26 @@
 
 import argparse
 import logging
+import sys
 from pathlib import Path
+from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy.orm import Session
 
-from game_of_life.config import SimulationConfig
-from game_of_life.core.engine import SimulationEngine
-from game_of_life.gui.app import GameOfLifeApp
-from game_of_life.logging_config import configure_logging
-from game_of_life.persistence.database import (
+from libs.config import SimulationConfig
+from libs.core.engine import SimulationEngine
+from libs.gui.app import GameOfLifeApp
+from libs.logging_config import configure_logging
+from libs.persistence.database import (
     BatchedCommitter,
     create_run_record,
     get_engine,
     init_db,
 )
-from game_of_life.persistence.loader import load_initial_state
-from game_of_life.persistence.models import IterationRecord
+from libs.persistence.loader import load_initial_state
+from libs.persistence.models import IterationRecord
 
 log = logging.getLogger(__name__)
 
@@ -104,7 +108,7 @@ def main() -> None:
             # We persist execution records in GUI mode via a monkeypatch.
             committer = BatchedCommitter(session, batch_size=25)
 
-            def persist_result(result):
+            def persist_result(result: Any) -> None:
                 record = IterationRecord(
                     run_id=run_record.id,
                     iteration_number=result.iteration,
@@ -117,12 +121,12 @@ def main() -> None:
             # Monkeypatch the engine's step temporarily to hook it
             orig_step = sim_engine.step
 
-            def hooked_step():
+            def hooked_step() -> Any:
                 res = orig_step()
                 persist_result(res)
                 return res
 
-            sim_engine.step = hooked_step
+            sim_engine.step = hooked_step  # type: ignore[method-assign]
 
             app.run()
             committer.commit()

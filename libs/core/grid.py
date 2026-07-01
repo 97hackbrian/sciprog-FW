@@ -6,7 +6,7 @@ from typing import ClassVar
 import numpy as np
 from typeguard import typechecked
 
-from game_of_life.config import BoundaryMode
+from libs.config import BoundaryMode
 
 
 @typechecked
@@ -37,16 +37,16 @@ class Grid:
     @property
     def rows(self) -> int:
         """Number of rows in the grid."""
-        return self.array.shape[0]
+        return int(self.array.shape[0])
 
     @property
     def cols(self) -> int:
         """Number of columns in the grid."""
-        return self.array.shape[1]
+        return int(self.array.shape[1])
 
     def population(self) -> int:
         """Return the number of live cells."""
-        return int(np.sum(self.array))
+        return int(float(np.sum(self.array)))
 
     def dead_cells(self) -> int:
         """Return the number of dead cells."""

@@ -7,8 +7,8 @@ from typing import Any
 import numpy as np
 from typeguard import typechecked
 
-from game_of_life.config import SimulationConfig
-from game_of_life.core.grid import Grid
+from libs.config import SimulationConfig
+from libs.core.grid import Grid
 
 # Note: multiprocessing and pattern detection will be integrated in later phases.
 # We will use structural typing or import dynamically for them to avoid circular imports
@@ -39,9 +39,9 @@ class SimulationEngine:
         self.grid = Grid(array=initial.copy(), boundary_mode=config.boundary_mode)
 
         # Initialize logic modules
-        from game_of_life.parallel.dispatch import get_dispatcher
-        from game_of_life.patterns.detector import PatternDetector
-        from game_of_life.patterns.stability import CycleTracker, StabilityTracker
+        from libs.parallel.dispatch import get_dispatcher
+        from libs.patterns.detector import PatternDetector
+        from libs.patterns.stability import CycleTracker, StabilityTracker
 
         self.dispatcher = get_dispatcher(initial.shape, config, initial)
         self.stability_tracker = StabilityTracker()
@@ -61,7 +61,7 @@ class SimulationEngine:
             self.cycle_tracker.reset()
 
         # Also need to reset the dispatcher if it's multiprocess
-        from game_of_life.parallel.dispatch import get_dispatcher
+        from libs.parallel.dispatch import get_dispatcher
 
         if self.dispatcher:
             self.dispatcher.shutdown()

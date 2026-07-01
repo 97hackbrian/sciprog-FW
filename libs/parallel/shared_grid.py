@@ -1,6 +1,7 @@
 """Shared memory buffer management for multiprocessing."""
 
 from multiprocessing.shared_memory import SharedMemory
+from typing import Any
 
 import numpy as np
 from typeguard import typechecked
@@ -46,7 +47,7 @@ class SharedGridBuffer:
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit."""
         self.close()
         self.unlink()

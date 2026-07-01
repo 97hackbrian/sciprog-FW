@@ -7,8 +7,8 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session
 from typeguard import typechecked
 
-from game_of_life.config import SimulationConfig
-from game_of_life.persistence.models import Base, SimulationRun
+from libs.config import SimulationConfig
+from libs.persistence.models import Base, SimulationRun
 
 
 @typechecked

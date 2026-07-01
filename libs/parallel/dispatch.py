@@ -6,10 +6,10 @@ from typing import Protocol
 import numpy as np
 from typeguard import typechecked
 
-from game_of_life.config import BoundaryMode, SimulationConfig
-from game_of_life.core.rules import apply_rules, count_neighbors
-from game_of_life.parallel.shared_grid import SharedGridBuffer
-from game_of_life.parallel.workers import WorkerPool
+from libs.config import BoundaryMode, SimulationConfig
+from libs.core.rules import apply_rules, count_neighbors
+from libs.parallel.shared_grid import SharedGridBuffer
+from libs.parallel.workers import WorkerPool
 
 
 class Dispatcher(Protocol):

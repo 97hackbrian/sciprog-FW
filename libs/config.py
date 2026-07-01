@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from typeguard import typechecked
 
 
