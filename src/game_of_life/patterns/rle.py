@@ -6,7 +6,7 @@ from typeguard import typechecked
 @typechecked
 def parse_rle(rle: str) -> frozenset[tuple[int, int]]:
     """Parse a standard Game-of-Life RLE string into a set of (row, col) coordinates.
-    
+
     Coordinates are relative to a (0,0) top-left origin.
     'o' = alive, 'b' = dead, digits = run length, '$' = end of row, '!' = end of pattern.
     """
@@ -34,5 +34,5 @@ def parse_rle(rle: str) -> frozenset[tuple[int, int]]:
             count_str = ""
         elif char == "!":
             break
-            
+
     return frozenset(cells)

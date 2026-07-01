@@ -16,6 +16,7 @@ class Grid:
 
     Values are strictly 0 (dead) and 1 (alive), stored as uint8.
     """
+
     array: np.ndarray
     boundary_mode: BoundaryMode = BoundaryMode.TOROIDAL
 
@@ -26,10 +27,10 @@ class Grid:
         """Validate the grid array."""
         if self.array.ndim != 2:
             raise ValueError(f"Grid array must be 2D, got {self.array.ndim}D")
-        
+
         if self.array.dtype != np.uint8:
             self.array = self.array.astype(np.uint8)
-            
+
         if not np.all(np.isin(self.array, [self.DEAD, self.ALIVE])):
             raise ValueError("Grid array must contain only 0s and 1s")
 

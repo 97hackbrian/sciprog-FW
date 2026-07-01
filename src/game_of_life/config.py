@@ -12,14 +12,16 @@ from typeguard import typechecked
 
 class BoundaryMode(Enum):
     """Boundary conditions for the grid."""
+
     TOROIDAL = auto()  # Edges wrap around
-    BOUNDED = auto()   # Edges are dead zones
+    BOUNDED = auto()  # Edges are dead zones
 
 
 @typechecked
 @dataclass
 class SimulationConfig:
     """Configuration settings for the simulation."""
+
     boundary_mode: BoundaryMode = BoundaryMode.TOROIDAL
     target_generations_per_second: float = 10.0
     multiprocessing_threshold_cells: int = 10000

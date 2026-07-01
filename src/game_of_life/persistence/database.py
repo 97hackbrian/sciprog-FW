@@ -2,14 +2,13 @@
 
 import json
 from pathlib import Path
-from typing import Any, Generator
 
-from sqlalchemy import create_engine, Engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import Session
 from typeguard import typechecked
 
 from game_of_life.config import SimulationConfig
-from game_of_life.persistence.models import Base, SimulationRun, IterationRecord
+from game_of_life.persistence.models import Base, SimulationRun
 
 
 @typechecked
@@ -26,16 +25,22 @@ def init_db(engine: Engine) -> None:
 
 
 @typechecked
-def create_run_record(session: Session, config: SimulationConfig, rows: int, cols: int, initial_source: str = "initial.pkl") -> SimulationRun:
+def create_run_record(
+    session: Session,
+    config: SimulationConfig,
+    rows: int,
+    cols: int,
+    initial_source: str = "initial.pkl",
+) -> SimulationRun:
     """Create and return a new SimulationRun record."""
     from dataclasses import asdict
-    
+
     # Simple JSON serialization of the config
     config_dict = asdict(config)
     # Convert enums and paths to string for JSON
     config_dict["boundary_mode"] = config_dict["boundary_mode"].name
     config_dict["db_path"] = str(config_dict["db_path"])
-    
+
     run = SimulationRun(
         grid_rows=rows,
         grid_cols=cols,
@@ -50,7 +55,7 @@ def create_run_record(session: Session, config: SimulationConfig, rows: int, col
 
 class BatchedCommitter:
     """Helper to commit records in batches to avoid SQLite performance traps."""
-    
+
     def __init__(self, session: Session, batch_size: int = 25):
         self.session = session
         self.batch_size = batch_size

@@ -15,8 +15,7 @@ import coloredlogs
 from typeguard import typechecked
 
 _LOG_FORMAT = (
-    "%(asctime)s [%(levelname)8s] %(name)s:%(lineno)d "
-    "(%(process)d/%(threadName)s) - %(message)s"
+    "%(asctime)s [%(levelname)8s] %(name)s:%(lineno)d (%(process)d/%(threadName)s) - %(message)s"
 )
 
 

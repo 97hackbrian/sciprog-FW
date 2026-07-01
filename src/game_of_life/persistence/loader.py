@@ -10,11 +10,11 @@ from typeguard import typechecked
 @typechecked
 def load_initial_state(path: Path) -> np.ndarray:
     """Load a Game of Life initial state from a pickle file.
-    
+
     Expects either:
     1. A raw 2D numpy array (values 0 and 1).
     2. A dictionary containing the grid under common keys like 'grid', 'board', 'state'.
-    
+
     Raises:
         FileNotFoundError: If the file does not exist.
         ValueError: If the payload is invalid or cannot be parsed as a 2D array.

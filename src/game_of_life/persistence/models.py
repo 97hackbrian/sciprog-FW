@@ -1,7 +1,6 @@
 """SQLAlchemy ORM models for Game of Life persistence."""
 
 from datetime import datetime
-from typing import Any
 
 from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -9,11 +8,13 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 class Base(DeclarativeBase):
     """Base class for all SQLAlchemy declarative models."""
+
     pass
 
 
 class SimulationRun(Base):
     """Record of a complete simulation session."""
+
     __tablename__ = "simulation_run"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -27,6 +28,7 @@ class SimulationRun(Base):
 
 class IterationRecord(Base):
     """Record of a single generation's statistics."""
+
     __tablename__ = "iteration_record"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)

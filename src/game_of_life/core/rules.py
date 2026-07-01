@@ -33,19 +33,19 @@ def count_neighbors(grid_array: np.ndarray, boundary: BoundaryMode) -> np.ndarra
 @typechecked
 def apply_rules(grid_array: np.ndarray, neighbor_counts: np.ndarray) -> np.ndarray:
     """Apply Conway's Game of Life rules to produce the next generation.
-    
+
     1. Any live cell with fewer than two live neighbors dies (underpopulation).
     2. Any live cell with two or three live neighbors survives.
     3. Any live cell with more than three live neighbors dies (overpopulation).
     4. Any dead cell with exactly three live neighbors becomes a live cell (reproduction).
     """
     alive = grid_array == 1
-    
+
     # Rule 2: survival
     survive = alive & ((neighbor_counts == 2) | (neighbor_counts == 3))
-    
+
     # Rule 4: birth
     birth = ~alive & (neighbor_counts == 3)
-    
+
     # Rule 1 & 3: death is implied by not surviving
     return np.where(survive | birth, 1, 0).astype(np.uint8)
