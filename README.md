@@ -21,28 +21,30 @@ conda activate game-of-life
 
 ## Usage
 
-Generate an initial state (or use the included `initial.pkl`):
+Generate an initial state (or use the included `data/initial.pkl`):
 ```bash
-python scripts/generate_initial_state.py --pattern random --density 0.3 --rows 50 --cols 50 --out initial.pkl
+python scripts/generate_initial_state.py --pattern random --density 0.3 --rows 50 --cols 50 --out data/initial.pkl
 ```
 
 Run the GUI simulation:
 ```bash
-python -m scripts.run_game_of_life --initial initial.pkl
+python scripts/run_game_of_life.py --initial data/initial.pkl
 ```
 
 Run headlessly (e.g. for CI or data collection):
 ```bash
-python -m scripts.run_game_of_life --initial initial.pkl --headless
+python scripts/run_game_of_life.py --initial data/initial.pkl --headless
 ```
 
 ## Architecture
 
-- `core/`: The simulation engine (`Grid`, `Rules`, `SimulationEngine`). Headless and fully testable.
-- `parallel/`: The shared-memory multiprocessing logic and adaptive dispatcher.
-- `patterns/`: RLE parser, catalog of known patterns, stability tracker, and pattern detector.
-- `persistence/`: SQLite database models and initial state loading logic.
-- `gui/`: Dear PyGui application and views.
+- `libs/core/`: The simulation engine (`Grid`, `Rules`, `SimulationEngine`). Headless and fully testable.
+- `libs/parallel/`: The shared-memory multiprocessing logic and adaptive dispatcher.
+- `libs/patterns/`: RLE parser, catalog of known patterns, stability tracker, and pattern detector.
+- `libs/persistence/`: SQLite database models and initial state loading logic.
+- `libs/gui/`: Dear PyGui application and views.
+- `scripts/`: Entrypoints for running the simulation and generating initial states.
+- `data/`: SQLite databases and pickle files for saving/loading data.
 
 ## Running Tests
 
@@ -53,6 +55,6 @@ pytest tests/
 
 To run the linter and formatter:
 ```bash
-ruff check src/ tests/
-ruff format --check src/ tests/
+ruff check .
+ruff format --check .
 ```

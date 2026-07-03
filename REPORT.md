@@ -1,7 +1,7 @@
 # Implementation Report
 
 ## Architecture Summary
-The project follows a modular, package-based architecture (`src/game_of_life/`) designed for testability and separation of concerns. The core engine (`core/`) operates headlessly and independently of the GUI (`gui/`) and persistence (`persistence/`) layers. Pattern detection (`patterns/`) handles identifying known structures via connected components, and the multiprocessing module (`parallel/`) provides seamless shared-memory parallelism.
+The project follows a flat, clean architecture (`libs/`, `scripts/`, `data/`) designed for testability and separation of concerns. The core engine (`libs/core/`) operates headlessly and independently of the GUI (`libs/gui/`) and persistence (`libs/persistence/`) layers. Pattern detection (`libs/patterns/`) handles identifying known structures via connected components, and the multiprocessing module (`libs/parallel/`) provides seamless shared-memory parallelism.
 
 ## Challenges and Solutions
 
