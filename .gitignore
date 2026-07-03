@@ -248,3 +248,13 @@ cython_debug/
 /data/*.sqlite
 /logs/
 .ipynb_checkpoints/
+
+# Environment Vscode
+.agents/
+.idea/
+
+#ruff cache
+.ruff_cache/
+
+#uv cache
+.uv/
