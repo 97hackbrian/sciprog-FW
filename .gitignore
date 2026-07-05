@@ -246,6 +246,7 @@ cython_debug/
 
 # Game of Life project specific
 /data/*.sqlite
+/data/*.pkl
 /logs/
 .ipynb_checkpoints/
 
