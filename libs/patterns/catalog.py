@@ -26,6 +26,17 @@ class Pattern:
     period: int | None
     cells: frozenset[tuple[int, int]]
 
+    @property
+    def bounding_box(self) -> tuple[int, int, int, int]:
+        """Return (min_r, max_r, min_c, max_c) for the pattern's cells."""
+        if not self.cells:
+            return 0, 0, 0, 0
+        min_r = min(r for r, c in self.cells)
+        max_r = max(r for r, c in self.cells)
+        min_c = min(c for r, c in self.cells)
+        max_c = max(c for r, c in self.cells)
+        return min_r, max_r, min_c, max_c
+
 
 def _parse_ascii_grid(grid_str: str) -> frozenset[tuple[int, int]]:
     """Helper to parse an ASCII grid (X=alive, .=dead)."""

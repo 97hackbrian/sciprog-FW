@@ -1,7 +1,7 @@
 """Dispatcher for adaptive multiprocessing."""
 
 import atexit
-from typing import Protocol
+from typing import Any, Protocol
 
 import numpy as np
 from typeguard import typechecked
@@ -10,6 +10,20 @@ from libs.config import BoundaryMode, SimulationConfig
 from libs.core.rules import apply_rules, count_neighbors
 from libs.parallel.shared_grid import SharedGridBuffer
 from libs.parallel.workers import WorkerPool
+
+
+@typechecked
+def _compute_stats(array: Any, is_gpu: bool = False) -> tuple[int, int]:
+    """Helper to compute live and dead cell counts."""
+    if is_gpu:
+        import cupy as cp  # type: ignore
+
+        live = int(cp.sum(array))
+    else:
+        live = int(np.sum(array))
+
+    dead = int(array.size - live)
+    return live, dead
 
 
 class Dispatcher(Protocol):
@@ -35,8 +49,7 @@ class SingleProcessDispatcher:
         """Compute next generation using a single process."""
         counts = count_neighbors(grid_array, self.boundary_mode)
         next_arr = apply_rules(grid_array, counts)
-        live = int(np.sum(next_arr))
-        dead = next_arr.size - live
+        live, dead = _compute_stats(next_arr, is_gpu=False)
         return next_arr, live, dead
 
     def shutdown(self) -> None:
@@ -100,8 +113,7 @@ class GpuDispatcher:
         counts = count_neighbors(self.gpu_array, self.boundary_mode)
         self.gpu_array = apply_rules(self.gpu_array, counts)
 
-        live = int(cp.sum(self.gpu_array))
-        dead = int(self.gpu_array.size - live)
+        live, dead = _compute_stats(self.gpu_array, is_gpu=True)
 
         # Transfer back to CPU memory for the rest of the app
         next_arr = cp.asnumpy(self.gpu_array)

@@ -37,13 +37,14 @@ def main() -> None:
         else:
             print(f"Unknown pattern '{args.pattern}'. Using a glider.")
             cells = parse_rle("bob$2bo$3o!")
+            # Create a dummy pattern to use its helper methods
+            from libs.patterns.catalog import Pattern, PatternCategory
+
+            pattern = Pattern("Glider", PatternCategory.SPACESHIP, 4, cells)
 
         # Center the pattern
         if cells:
-            min_r = min(r for r, c in cells)
-            max_r = max(r for r, c in cells)
-            min_c = min(c for r, c in cells)
-            max_c = max(c for r, c in cells)
+            min_r, max_r, min_c, max_c = pattern.bounding_box
 
             height = max_r - min_r + 1
             width = max_c - min_c + 1

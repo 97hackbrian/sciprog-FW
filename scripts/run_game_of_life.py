@@ -26,6 +26,18 @@ from libs.persistence.models import IterationRecord
 log = logging.getLogger(__name__)
 
 
+def persist_step_result(result: Any, run_id: int, committer: BatchedCommitter) -> None:
+    """Helper to persist a StepResult to the database without duplicating logic."""
+    record = IterationRecord(
+        run_id=run_id,
+        iteration_number=result.iteration,
+        live_cells=result.live_cells,
+        dead_cells=result.dead_cells,
+        execution_time_ms=result.execution_time_ms,
+    )
+    committer.add(record)
+
+
 def run_headless(engine: SimulationEngine, db_session: Session, run_id: int) -> None:
     """Run the simulation without the GUI, saving to database."""
     log.info("Starting headless simulation loop...")
@@ -35,14 +47,7 @@ def run_headless(engine: SimulationEngine, db_session: Session, run_id: int) -> 
         while True:
             result = engine.step()
 
-            record = IterationRecord(
-                run_id=run_id,
-                iteration_number=result.iteration,
-                live_cells=result.live_cells,
-                dead_cells=result.dead_cells,
-                execution_time_ms=result.execution_time_ms,
-            )
-            committer.add(record)
+            persist_step_result(result, run_id, committer)
 
             if result.iteration % 100 == 0:
                 log.info(f"Iteration {result.iteration}: {result.live_cells} live cells")
@@ -152,14 +157,7 @@ def main() -> None:
             committer = BatchedCommitter(session, batch_size=25)
 
             def persist_result(result: Any) -> None:
-                record = IterationRecord(
-                    run_id=run_record.id,
-                    iteration_number=result.iteration,
-                    live_cells=result.live_cells,
-                    dead_cells=result.dead_cells,
-                    execution_time_ms=result.execution_time_ms,
-                )
-                committer.add(record)
+                persist_step_result(result, run_record.id, committer)
 
             # Monkeypatch the engine's step temporarily to hook it
             orig_step = sim_engine.step
