@@ -1,6 +1,6 @@
 [project]
 name = "game_of_life"
-version = "0.1.0"
+version = "1.0.0"
 description = "Conway's Game of Life"
 requires-python = "==3.13.14"
 dependencies = [
@@ -27,8 +27,9 @@ ignore = ["D100", "D104", "D107"]
 convention = "google"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "."]
 pythonpath = ["."]
+addopts = "--ruff"
 
 [tool.mypy]
 python_version = "3.13"

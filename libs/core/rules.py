@@ -1,13 +1,22 @@
 """Rule evaluation and neighbor counting for the Game of Life."""
 
+from typing import Any
+
 import numpy as np
 from scipy.ndimage import convolve  # type: ignore[import-untyped]
 from typeguard import typechecked
 
 from libs.config import BoundaryMode
 
+try:
+    import cupy as cp  # type: ignore
+    from cupyx.scipy.ndimage import convolve as cp_convolve  # type: ignore
+except ImportError:
+    cp = None
+    cp_convolve = None
+
 # 3x3 kernel, center is 0 so a cell does not count itself as a neighbor
-NEIGHBOR_KERNEL: np.ndarray = np.array(
+NEIGHBOR_KERNEL_CPU: np.ndarray = np.array(
     [
         [1, 1, 1],
         [1, 0, 1],
@@ -15,10 +24,11 @@ NEIGHBOR_KERNEL: np.ndarray = np.array(
     ],
     dtype=np.uint8,
 )
+NEIGHBOR_KERNEL_GPU: Any = cp.array(NEIGHBOR_KERNEL_CPU) if cp is not None else None
 
 
 @typechecked
-def count_neighbors(grid_array: np.ndarray, boundary: BoundaryMode) -> np.ndarray:
+def count_neighbors(grid_array: Any, boundary: BoundaryMode) -> Any:
     """Count live neighbors for each cell in the grid."""
     if boundary == BoundaryMode.TOROIDAL:
         mode = "wrap"
@@ -27,13 +37,14 @@ def count_neighbors(grid_array: np.ndarray, boundary: BoundaryMode) -> np.ndarra
         mode = "constant"
         cval = 0
 
-    from typing import cast
-
-    return cast(np.ndarray, convolve(grid_array, NEIGHBOR_KERNEL, mode=mode, cval=cval))
+    if cp is not None and isinstance(grid_array, cp.ndarray):
+        return cp_convolve(grid_array, NEIGHBOR_KERNEL_GPU, mode=mode, cval=cval)
+    else:
+        return convolve(grid_array, NEIGHBOR_KERNEL_CPU, mode=mode, cval=cval)
 
 
 @typechecked
-def apply_rules(grid_array: np.ndarray, neighbor_counts: np.ndarray) -> np.ndarray:
+def apply_rules(grid_array: Any, neighbor_counts: Any) -> Any:
     """Apply Conway's Game of Life rules to produce the next generation.
 
     1. Any live cell with fewer than two live neighbors dies (underpopulation).
@@ -50,4 +61,7 @@ def apply_rules(grid_array: np.ndarray, neighbor_counts: np.ndarray) -> np.ndarr
     birth = ~alive & (neighbor_counts == 3)
 
     # Rule 1 & 3: death is implied by not surviving
-    return np.where(survive | birth, 1, 0).astype(np.uint8)
+    if cp is not None and isinstance(grid_array, cp.ndarray):
+        return cp.where(survive | birth, 1, 0).astype(cp.uint8)
+    else:
+        return np.where(survive | birth, 1, 0).astype(np.uint8)

@@ -62,14 +62,28 @@ def main() -> None:
     """Entry point for the Game of Life CLI."""
     parser = argparse.ArgumentParser(description="Conway's Game of Life")
     parser.add_argument(
-        "--initial", type=Path, default=Path("initial.pkl"), help="Path to initial state pickle"
+        "--initial",
+        type=Path,
+        default=Path("data/initial.pkl"),
+        help="Path to initial state pickle",
     )
     parser.add_argument("--config", type=Path, default=None, help="Path to config yaml")
     parser.add_argument("--headless", action="store_true", help="Run without GUI")
+    parser.add_argument(
+        "--backend",
+        type=str,
+        choices=["auto", "cpu", "gpu"],
+        default=None,
+        help="Compute backend to use",
+    )
     args = parser.parse_args()
 
     # Load configuration
     config = SimulationConfig.load(args.config)
+    if args.backend:
+        from libs.config import ComputeBackend
+
+        config.backend = ComputeBackend[args.backend.upper()]
 
     # Configure logging
     log_dir = Path("logs")

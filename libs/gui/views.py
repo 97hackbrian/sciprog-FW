@@ -72,6 +72,7 @@ class StatsView:
         self.live_cells: list[float] = []
 
         with dpg.group(parent=parent):
+            self.text_backend = dpg.add_text("Backend: Unknown", color=[100, 200, 255])
             self.text_iter = dpg.add_text("Iteration: 0")
             self.text_live = dpg.add_text("Live Cells: 0")
             self.text_dead = dpg.add_text("Dead Cells: 0")
@@ -115,3 +116,7 @@ class StatsView:
         dpg.set_value(self.line_series, [[], []])
         dpg.set_value(self.text_status, "Status: Running")
         dpg.configure_item(self.text_status, color=[0, 255, 0])
+
+    def set_backend(self, text: str) -> None:
+        """Update the backend text readout."""
+        dpg.set_value(self.text_backend, f"Backend: {text}")

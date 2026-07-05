@@ -17,12 +17,21 @@ class BoundaryMode(Enum):
     BOUNDED = auto()  # Edges are dead zones
 
 
+class ComputeBackend(Enum):
+    """Compute backend for the simulation."""
+
+    AUTO = auto()
+    CPU = auto()
+    GPU = auto()
+
+
 @typechecked
 @dataclass
 class SimulationConfig:
     """Configuration settings for the simulation."""
 
     boundary_mode: BoundaryMode = BoundaryMode.TOROIDAL
+    backend: ComputeBackend = ComputeBackend.AUTO
     target_generations_per_second: float = 10.0
     multiprocessing_threshold_cells: int = 10000
     n_workers: int = field(default_factory=lambda: max(1, os.cpu_count() or 1 - 1))
@@ -44,6 +53,10 @@ class SimulationConfig:
         if "boundary_mode" in data:
             if isinstance(data["boundary_mode"], str):
                 data["boundary_mode"] = BoundaryMode[data["boundary_mode"].upper()]
+
+        if "backend" in data:
+            if isinstance(data["backend"], str):
+                data["backend"] = ComputeBackend[data["backend"].upper()]
 
         # Convert db_path string to Path if present
         if "db_path" in data:

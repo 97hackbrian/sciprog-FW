@@ -31,13 +31,15 @@ class Controls:
                 dpg.add_button(label="Step", callback=self.on_step)
                 dpg.add_button(label="Reset", callback=self.on_reset)
 
-            dpg.add_slider_float(
-                label="Speed (Gen/s)",
-                default_value=10.0,
-                min_value=1.0,
-                max_value=60.0,
-                callback=lambda s, a, u: self.on_speed_change(a),
+            self.speed_slider = dpg.add_slider_int(
+                label="Speed",
+                default_value=10,
+                min_value=1,
+                max_value=1000,
+                format="%d Gen/s",
+                callback=self._handle_speed_change,
             )
+            self.text_speed_status = dpg.add_text("Speed Limit: CAPPED", color=[200, 200, 200])
 
             dpg.add_combo(
                 label="Boundary Mode",
@@ -51,6 +53,17 @@ class Controls:
             dpg.add_text("Detected Patterns:")
             self.pattern_listbox = dpg.add_listbox(items=[], width=-1, num_items=6)
             self._pattern_items: list[str] = []
+
+    def _handle_speed_change(self, sender: Any, app_data: Any, user_data: Any) -> None:
+        if app_data >= 1000:
+            dpg.configure_item(self.speed_slider, format="MAX (Uncapped)")
+            dpg.set_value(self.text_speed_status, "Speed Limit: UNCAPPED (Max Performance)")
+            dpg.configure_item(self.text_speed_status, color=[255, 100, 100])
+        else:
+            dpg.configure_item(self.speed_slider, format="%d Gen/s")
+            dpg.set_value(self.text_speed_status, "Speed Limit: CAPPED")
+            dpg.configure_item(self.text_speed_status, color=[200, 200, 200])
+        self.on_speed_change(float(app_data))
 
     def _handle_play_pause(self, sender: Any, app_data: Any, user_data: Any) -> None:
         is_playing = self.on_play_pause()

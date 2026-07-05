@@ -72,11 +72,6 @@ class MultiprocessDispatcher:
         # Swap main process references
         self.buffer.swap()
 
-        # Ensure the engine's grid array also points to the new current array
-        # Note: we return self.buffer.current_array as the new state for the engine
-        # and copy it to grid_array just in case
-        np.copyto(grid_array, self.buffer.current_array)
-
         return self.buffer.current_array, live, dead
 
     def shutdown(self) -> None:
@@ -89,10 +84,57 @@ class MultiprocessDispatcher:
 
 
 @typechecked
+class GpuDispatcher:
+    """GPU-accelerated strategy using CuPy."""
+
+    def __init__(self, config: SimulationConfig, initial: np.ndarray):
+        import cupy as cp  # type: ignore
+
+        self.boundary_mode = config.boundary_mode
+        self.gpu_array = cp.array(initial)
+
+    def step(self, grid_array: np.ndarray) -> tuple[np.ndarray, int, int]:
+        """Compute next generation using GPU."""
+        import cupy as cp  # type: ignore
+
+        counts = count_neighbors(self.gpu_array, self.boundary_mode)
+        self.gpu_array = apply_rules(self.gpu_array, counts)
+
+        live = int(cp.sum(self.gpu_array))
+        dead = int(self.gpu_array.size - live)
+
+        # Transfer back to CPU memory for the rest of the app
+        next_arr = cp.asnumpy(self.gpu_array)
+
+        return next_arr, live, dead
+
+    def shutdown(self) -> None:
+        """No special resources to release for GPU (handled by CuPy)."""
+        pass
+
+
+@typechecked
 def get_dispatcher(
     shape: tuple[int, int], config: SimulationConfig, initial: np.ndarray
 ) -> Dispatcher:
-    """Return the appropriate dispatcher based on grid size."""
+    """Return the appropriate dispatcher based on config and grid size."""
+    from libs.config import ComputeBackend
+
+    use_gpu = False
+    if config.backend == ComputeBackend.GPU:
+        use_gpu = True
+    elif config.backend == ComputeBackend.AUTO:
+        try:
+            import cupy as cp  # type: ignore
+
+            if cp.cuda.runtime.getDeviceCount() > 0:
+                use_gpu = True
+        except Exception:
+            pass
+
+    if use_gpu:
+        return GpuDispatcher(config, initial)
+
     total_cells = shape[0] * shape[1]
     if total_cells < config.multiprocessing_threshold_cells:
         return SingleProcessDispatcher(config.boundary_mode)

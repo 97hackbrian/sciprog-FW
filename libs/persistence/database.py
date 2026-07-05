@@ -39,6 +39,7 @@ def create_run_record(
     config_dict = asdict(config)
     # Convert enums and paths to string for JSON
     config_dict["boundary_mode"] = config_dict["boundary_mode"].name
+    config_dict["backend"] = config_dict["backend"].name
     config_dict["db_path"] = str(config_dict["db_path"])
 
     run = SimulationRun(

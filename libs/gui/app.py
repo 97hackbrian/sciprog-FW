@@ -34,9 +34,9 @@ class GameOfLifeApp:
         with dpg.window(tag="Primary Window"):
             with dpg.group(horizontal=True):
                 # Left panel: controls and stats
-                with dpg.child_window(width=300):
+                with dpg.child_window(width=300, tag="LeftPanel"):
                     self.controls = Controls(
-                        parent=dpg.last_item(),
+                        parent="LeftPanel",
                         on_play_pause=self.toggle_play,
                         on_step=self.step_once,
                         on_reset=self.reset_sim,
@@ -44,8 +44,25 @@ class GameOfLifeApp:
                         on_boundary_change=self.set_boundary,
                     )
 
-                    dpg.add_separator()
-                    self.stats_view = StatsView(parent=dpg.last_item())
+                    dpg.add_separator(parent="LeftPanel")
+                    self.stats_view = StatsView(parent="LeftPanel")
+
+                    # Set the backend label
+                    from libs.parallel.dispatch import GpuDispatcher, MultiprocessDispatcher
+
+                    if isinstance(self.engine.dispatcher, GpuDispatcher):
+                        try:
+                            import cupy as cp  # type: ignore
+
+                            props = cp.cuda.runtime.getDeviceProperties(0)
+                            model = props["name"].decode("utf-8")
+                            self.stats_view.set_backend(f"GPU ({model})")
+                        except Exception:
+                            self.stats_view.set_backend("GPU (Unknown)")
+                    elif isinstance(self.engine.dispatcher, MultiprocessDispatcher):
+                        self.stats_view.set_backend(f"CPU (Multi, {self.config.n_workers} workers)")
+                    else:
+                        self.stats_view.set_backend("CPU (Single Process)")
 
                 # Right panel: grid
                 with dpg.child_window():
@@ -106,8 +123,9 @@ class GameOfLifeApp:
 
         while dpg.is_dearpygui_running():
             current_time = time.time()
-            if self.is_playing and (current_time - self.last_update_time) >= (
-                1.0 / self.target_fps
+            if self.is_playing and (
+                self.target_fps >= 1000.0
+                or (current_time - self.last_update_time) >= (1.0 / self.target_fps)
             ):
                 self._do_step()
                 self.last_update_time = current_time
