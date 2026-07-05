@@ -93,6 +93,35 @@ def main() -> None:
 
     # Load initial state
     try:
+        if not args.initial.exists():
+            if "--initial" in sys.argv:
+                log.error(
+                    f"Initial state file not found: {args.initial}\n"
+                    f"Please generate it first using:\n"
+                    f"    python scripts/generate_initial_state.py --out {args.initial}"
+                )
+                return
+            else:
+                log.info(f"Default state {args.initial} not found. Generating automatically...")
+                import subprocess
+
+                # Automatically generate a 100x100 random grid if the default doesn't exist
+                subprocess.run(
+                    [
+                        sys.executable,
+                        "scripts/generate_initial_state.py",
+                        "--out",
+                        str(args.initial),
+                        "--pattern",
+                        "random",
+                        "--rows",
+                        "100",
+                        "--cols",
+                        "100",
+                    ],
+                    check=True,
+                )
+
         initial_state = load_initial_state(args.initial)
     except Exception as e:
         log.error(f"Failed to load initial state: {e}")
