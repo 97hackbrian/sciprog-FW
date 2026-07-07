@@ -23,7 +23,7 @@ class DirectorioUCN(scrapy.Spider):
     }
 
     def parse(self, response: Response):
-        for letter in string.ascii_uppercase:
+        for letter in reversed(string.ascii_uppercase):
             yield form2request(
                 response.css("form"),
                 data={
@@ -38,20 +38,19 @@ class DirectorioUCN(scrapy.Spider):
     def parse_result(self, response: Response):
         letter = response.meta["letter"]
         rows = response.css("#resultados tr")
-        persons = []
+        people = []
 
         for row in rows:
             cols = [c.strip() for c in row.css("td ::text, td::text").getall() if c.strip()]
-            log.debug(f"cols: {cols}")
             link = row.css("a::attr(href)").get()
             if cols:
-                person = {"datos": " | ".join(cols)}
+                person = {"name": " | ".join(cols)}
                 if link:
                     person["link"] = response.urljoin(link)
-                persons.append(person)
+                people.append(person)
 
-        log.info(f"  [{letter}] {len(persons)} results")
-        yield {"letra": letter, "personas": persons}
+        log.info(f"  [{letter}] {len(people)} results")
+        yield {"letter": letter, "people": people}
 
 
 def main() -> None:
