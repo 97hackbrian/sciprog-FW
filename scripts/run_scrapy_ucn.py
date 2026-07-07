@@ -49,7 +49,7 @@ class DirectorioUCN(scrapy.Spider):
                     person["link"] = response.urljoin(link)
                 people.append(person)
 
-        log.info(f"  [{letter}] {len(people)} results")
+        log.debug(f"  [{letter}] {len(people)} results")
         yield {"letter": letter, "people": people}
 
 
