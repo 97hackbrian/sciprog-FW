@@ -1,17 +1,12 @@
 #  Copyright (c) 2026. Programacion Cientifica, DISC, Antofagasta, Chile.
 import logging
-import sys
 from pathlib import Path
 
 from sqlalchemy import String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
 
-# ensure libs/ is on the path
-_script_dir = Path(__file__).resolve().parent
-sys.path.insert(0, str(_script_dir.parent / "libs"))
-
-from benchmarking import benchmark  # ty:ignore[unresolved-import]
-from logger import configure_logging  # ty:ignore[unresolved-import]
+from benchmarking import benchmark
+from logger import configure_logging
 
 
 # the base class

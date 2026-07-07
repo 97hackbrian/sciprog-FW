@@ -7,8 +7,8 @@ from pathlib import Path
 
 from prefect import task, get_run_logger, flow
 
-from benchmarking import benchmark  # ty:ignore[unresolved-import]
-from logger import configure_logging  # ty:ignore[unresolved-import]
+from benchmarking import benchmark
+from logger import configure_logging
 
 
 @task(retries=3, retry_delay_seconds=5, log_prints=True)

@@ -1,8 +1,10 @@
 import logging
 from pathlib import Path
 
-from benchmarking import benchmark  # ty:ignore[unresolved-import]
-from logger import configure_logging  # ty:ignore[unresolved-import]
+from benchmarking import benchmark
+from logger import configure_logging
+
+log = logging.getLogger(__name__)
 
 
 def main() -> None:
@@ -12,7 +14,6 @@ def main() -> None:
 # call the main function
 if __name__ == '__main__':
     configure_logging(logging.DEBUG)
-    log = logging.getLogger(__name__)
 
     root_dir = Path(__file__).resolve().parent.parent
     log.debug(f"root_dir: {root_dir}")

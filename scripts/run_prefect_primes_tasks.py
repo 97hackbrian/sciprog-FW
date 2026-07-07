@@ -6,8 +6,8 @@ from pathlib import Path
 from numba import njit
 from prefect import task, flow
 
-from benchmarking import benchmark  # ty:ignore[unresolved-import]
-from logger import configure_logging  # ty:ignore[unresolved-import]
+from benchmarking import benchmark
+from logger import configure_logging
 
 
 @njit(fastmath=True)

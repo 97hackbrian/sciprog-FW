@@ -8,8 +8,8 @@ import numpy as np
 from prettytable import PrettyTable, HRuleStyle
 from tqdm import tqdm
 
-from benchmarking import benchmark  # ty:ignore[unresolved-import]
-from logger import configure_logging  # ty:ignore[unresolved-import]
+from benchmarking import benchmark
+from logger import configure_logging
 
 # The board.
 Board: TypeAlias = list[list[int]]

@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 from pandas.plotting import scatter_matrix
 from ucimlrepo import fetch_ucirepo
 
-from benchmarking import benchmark  # ty:ignore[unresolved-import]
-from logger import configure_logging  # ty:ignore[unresolved-import]
+from benchmarking import benchmark
+from logger import configure_logging
 
 
 def main():

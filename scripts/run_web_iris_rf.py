@@ -9,8 +9,8 @@ from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 from sklearn.ensemble import RandomForestClassifier
 
-from benchmarking import benchmark  # ty:ignore[unresolved-import]
-from logger import configure_logging  # ty:ignore[unresolved-import]
+from benchmarking import benchmark
+from logger import configure_logging
 
 
 @streamlit.cache_resource(show_spinner=True)

@@ -6,8 +6,8 @@ from pathlib import Path
 from data_profiling import ProfileReport
 from ucimlrepo import fetch_ucirepo
 
-from benchmarking import benchmark  # ty:ignore[unresolved-import]
-from logger import configure_logging  # ty:ignore[unresolved-import]
+from benchmarking import benchmark
+from logger import configure_logging
 
 
 def main():

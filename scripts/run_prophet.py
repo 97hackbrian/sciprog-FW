@@ -13,8 +13,8 @@ from prophet import Prophet
 from prophet.diagnostics import cross_validation, performance_metrics
 from prophet.plot import add_changepoints_to_plot
 
-from benchmarking import benchmark  # ty:ignore[unresolved-import]
-from logger import configure_logging  # ty:ignore[unresolved-import]
+from benchmarking import benchmark
+from logger import configure_logging
 
 
 def main() -> None:

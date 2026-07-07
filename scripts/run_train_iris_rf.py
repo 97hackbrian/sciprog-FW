@@ -10,8 +10,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.tree import plot_tree
 from ucimlrepo import fetch_ucirepo
 
-from benchmarking import benchmark  # ty:ignore[unresolved-import]
-from logger import configure_logging  # ty:ignore[unresolved-import]
+from benchmarking import benchmark
+from logger import configure_logging
 
 
 def visualize_random_forest(model: RandomForestClassifier, X):

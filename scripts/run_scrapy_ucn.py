@@ -7,8 +7,8 @@ from form2request import form2request
 from scrapy.crawler import CrawlerProcess
 from scrapy.http import Response
 
-from benchmarking import benchmark  # ty:ignore[unresolved-import]
-from logger import configure_logging  # ty:ignore[unresolved-import]
+from benchmarking import benchmark
+from logger import configure_logging
 
 log = logging.getLogger(__name__)
 
