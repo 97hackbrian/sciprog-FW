@@ -42,4 +42,5 @@ def configure_logging(level: int = logging.DEBUG) -> None:
     logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
     logging.getLogger("matplotlib.pyplot").setLevel(logging.WARNING)
     logging.getLogger("numba.core").setLevel(logging.WARNING)
+    logging.getLogger("scrapling").setLevel(logging.WARNING)
     logging.getLogger("websockets.client").setLevel(logging.WARNING)
