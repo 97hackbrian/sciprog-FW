@@ -107,6 +107,22 @@ ruff format --check .      # Run the formatter (dry-run)
 ## Architecture Summary
 The project follows a flat, clean architecture (`libs/`, `scripts/`, `data/`) designed for testability and separation of concerns. The core engine (`libs/core/`) operates headlessly and independently of the GUI (`libs/gui/`) and persistence (`libs/persistence/`) layers. Pattern detection (`libs/patterns/`) handles identifying known structures via connected components, and the multiprocessing module (`libs/parallel/`) provides seamless shared-memory parallelism.
 
+## Backend Architectures Explained
+
+To understand how the simulation runs under the hood, here is the exact breakdown of the three independent compute backends:
+
+### 1. GPU Mode (`--backend gpu`)
+- **What it uses:** Exclusively uses CuPy (`cupyx.scipy.ndimage`).
+- **How it works:** CuPy is a library designed to be an exact clone of SciPy, but written entirely for graphics cards (CUDA). To simulate the game, 100% of the mathematical cell evaluation is sent to the GPU, completely bypassing the classic CPU SciPy implementation.
+
+### 2. CPU Mode (`--backend cpu`)
+- **What it uses:** Exclusively uses SciPy (`scipy.ndimage`).
+- **How it works:** All mathematical work is performed strictly on the main processor (RAM and CPU). If the matrix is large, it distributes the work across multiple cores using `multiprocessing` and shared memory blocks. It does not touch the GPU at all.
+
+### 3. Numba Mode (`--backend numba`)
+- **What it uses:** Exclusively uses the CPU and native compiled code (JIT). It does not use the GPU.
+- **How it works:** Numba takes standard Python `for` loops and, just before execution, translates (compiles) them into ultra-low-level C machine code designed specifically for your processor. By doing so, it bypasses the slow Python interpreter and high-level math libraries (like SciPy), instead squeezing all available CPU cores using pure, native Multithreading.
+
 ## Hardware Testing Environment & OS Compatibility
 > [!IMPORTANT]
 > **OS Compatibility:** The entire project was developed and rigorously tested on Linux, but all implementations (both new and existing) are fully cross-platform compatible with Windows.
@@ -136,10 +152,17 @@ The performance benchmarks and multi-processing threshold crossover points (as s
 **Challenge**: Finding the actual crossover point where multiprocessing is beneficial.
 **Solution**: Built a Jupyter notebook (`performance_analysis.ipynb`) to benchmark various grid sizes. (The actual threshold must be measured in the grading environment or developer environment and updated in `config.yaml`). The dispatcher adaptively chooses between single-process and multi-process execution based on this measured threshold.
 
-### 5. GPU Acceleration via CuPy
+### 5. GPU Acceleration & Adaptive Fallback
 **Challenge**: To drastically improve performance for very large grids without disrupting the GUI or testing framework, while supporting systems without GPUs.
-**Solution**: Implemented a `GpuDispatcher` using CuPy (`cupy` and `cupyx.scipy.ndimage.convolve`) which computes generation steps entirely on the GPU. The `run_game_of_life.py` entrypoint was enhanced with a `--backend {auto, cpu, gpu}` flag. The application defaults to `auto`, which safely falls back to NumPy CPU execution if an Nvidia GPU or CuPy dependencies are not detected.
+**Solution**: Implemented a `GpuDispatcher` using CuPy (`cupy` and `cupyx.scipy.ndimage.convolve`) which computes generation steps entirely on the GPU. The `run_game_of_life.py` entrypoint defaults to an `auto` backend, which safely falls back to Numba or NumPy CPU execution if an Nvidia GPU or CuPy dependencies are not detected. A robust fallback mechanism guarantees the application never crashes due to backend initialization failures, automatically down-grading to the next best available engine and notifying the UI.
 
 ### 6. CPU Topology (P-Cores vs E-Cores) & Numba Acceleration
-**Challenge**: On hybrid processors (like Intel 13th Gen), synchronous `multiprocessing` processes get severely bottlenecked when the OS scheduler assigns chunks to slower E-Cores. The fast P-Cores sleep waiting for the E-Cores to finish.
-**Solution**: Implemented a cross-platform (Linux/Windows) topology scanner (`libs/parallel/topology.py`) utilizing `/sys/devices/system/cpu/` and `psutil` to isolate High-Performance (P-Cores). Process affinity is strictly bound to P-Cores to maximize synchronous frame rates. Additionally, an opt-in `--backend numba` flag was added to JIT-compile the Conway loops using LLVM for comparison.
+**Challenge**: On hybrid processors (like Intel 13th Gen), synchronous `multiprocessing` processes get severely bottlenecked when the OS scheduler assigns chunks to slower E-Cores. The fast P-Cores sleep waiting for the E-Cores to finish ("the weakest link problem").
+**Solution**: Implemented a cross-platform (Linux/Windows) topology scanner (`libs/parallel/topology.py`) utilizing `/sys/devices/system/cpu/` and `psutil` to isolate High-Performance (P-Cores). Process affinity is strictly bound to P-Cores to maximize synchronous frame rates. Additionally, an opt-in `--backend numba` flag was added to JIT-compile the Conway loops using LLVM natively in multithreading mode, completely bypassing the IPC overhead of SciPy multiprocessing.
+
+### 7. Exhaustive Performance Findings
+An exhaustive ablation study (`notebooks/performance_analysis.ipynb`) evaluated all permutations of grid sizes, backends, and CPU core affinities with fixed random seeds for absolute repeatability.
+**Conclusions:**
+1. **Small Grids (< 50x50):** `Single Process` is strictly optimal due to the absence of Inter-Process Communication (IPC) overhead or PCIe memory transfer latency.
+2. **Medium Grids (~500x500):** `Numba JIT (P-Cores Only)` is the undisputed CPU champion. Numba's native multithreading drastically outperforms `scipy` multiprocessing by eliminating shared memory duplication and E-Core scheduling penalties.
+3. **Massive Grids (1000x1000+):** `GPU (CuPy)` destroys the competition, computing massive arrays in fractions of a millisecond utilizing massive CUDA data-parallelism.
