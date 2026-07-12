@@ -45,7 +45,7 @@ class SimulationConfig:
     gui_window_width: int = 1200
     gui_window_height: int = 800
     gui_panel_width: int = 300
-    gui_plot_height: int = 150
+    gui_plot_height: int = 250
     gui_plot_max_history: int = 200
     gui_font_scale: float = 1.3
     gui_pattern_log_max_items: int = 50

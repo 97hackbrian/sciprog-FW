@@ -80,6 +80,7 @@ class StatsView:
         self.max_history = max_history
         self.iterations: list[float] = []
         self.live_cells: list[float] = []
+        self.step_times: list[float] = []
 
         with dpg.group(parent=parent):
             self.text_backend = dpg.add_text("Backend: Unknown", color=[100, 200, 255])
@@ -94,6 +95,27 @@ class StatsView:
                 self.x_axis = dpg.add_plot_axis(dpg.mvXAxis, label="Iteration")
                 self.y_axis = dpg.add_plot_axis(dpg.mvYAxis, label="Live Cells")
                 self.line_series = dpg.add_line_series([], [], parent=self.y_axis)
+
+            with dpg.plot(label="Performance History", height=plot_height, width=-1, no_menus=True):
+                self.x_axis_perf = dpg.add_plot_axis(dpg.mvXAxis, label="Iteration")
+                self.y_axis_perf = dpg.add_plot_axis(dpg.mvYAxis, label="Step Time (ms)")
+                self.perf_series = dpg.add_line_series([], [], parent=self.y_axis_perf)
+
+            # Theme for Population Plot (Green)
+            with dpg.theme() as pop_theme:
+                with dpg.theme_component(dpg.mvLineSeries):
+                    dpg.add_theme_color(
+                        dpg.mvPlotCol_Line, (0, 255, 100, 255), category=dpg.mvThemeCat_Plots
+                    )
+            dpg.bind_item_theme(self.line_series, pop_theme)
+
+            # Theme for Performance Plot (Cyan)
+            with dpg.theme() as perf_theme:
+                with dpg.theme_component(dpg.mvLineSeries):
+                    dpg.add_theme_color(
+                        dpg.mvPlotCol_Line, (0, 255, 255, 255), category=dpg.mvThemeCat_Plots
+                    )
+            dpg.bind_item_theme(self.perf_series, perf_theme)
 
     def update(self, iteration: int, live: int, dead: int, time_ms: float, is_stable: bool) -> None:
         """Update text readouts and the rolling plot."""
@@ -111,20 +133,40 @@ class StatsView:
 
         self.iterations.append(float(iteration))
         self.live_cells.append(float(live))
+        self.step_times.append(float(time_ms))
 
         if len(self.iterations) > self.max_history:
             self.iterations.pop(0)
             self.live_cells.pop(0)
+            self.step_times.pop(0)
 
         dpg.set_value(self.line_series, [self.iterations, self.live_cells])
+        dpg.set_value(self.perf_series, [self.iterations, self.step_times])
+
+        # Fit X axes automatically
         dpg.fit_axis_data(self.x_axis)
-        dpg.fit_axis_data(self.y_axis)
+        dpg.fit_axis_data(self.x_axis_perf)
+
+        # Manually scale Y axes so they tightly fit the local min/max instead of flattening at 0
+        if self.live_cells:
+            min_l, max_l = min(self.live_cells), max(self.live_cells)
+            margin_l = (max_l - min_l) * 0.1 or 1.0
+            dpg.set_axis_limits(self.y_axis, min_l - margin_l, max_l + margin_l)
+
+        if self.step_times:
+            min_s, max_s = min(self.step_times), max(self.step_times)
+            margin_s = (max_s - min_s) * 0.1 or 1.0
+            dpg.set_axis_limits(self.y_axis_perf, min_s - margin_s, max_s + margin_s)
 
     def reset(self) -> None:
         """Clear history on reset."""
         self.iterations.clear()
         self.live_cells.clear()
+        self.step_times.clear()
         dpg.set_value(self.line_series, [[], []])
+        dpg.set_value(self.perf_series, [[], []])
+        dpg.set_axis_limits_auto(self.y_axis)
+        dpg.set_axis_limits_auto(self.y_axis_perf)
         dpg.set_value(self.text_status, "Status: Running")
         dpg.configure_item(self.text_status, color=[0, 255, 0])
 
