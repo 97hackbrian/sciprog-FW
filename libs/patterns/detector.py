@@ -125,9 +125,7 @@ class PatternDetector:
                 )
                 matches.append(match)
 
-                if matched_name == "Glider":
-                    log.info(f"Detected Glider at ({top_left_r}, {top_left_c})")
-                elif self.enable_extended:
+                if self.enable_extended:
                     log.debug(f"Detected {matched_name} at ({top_left_r}, {top_left_c})")
 
         return matches

@@ -242,6 +242,14 @@ class GameOfLifeApp:
         )
         self.controls.add_patterns(result.iteration, result.detected_patterns)
 
+        for p in result.detected_patterns:
+            if p.name == "Glider":
+                # Matches the red GUI text format in the terminal
+                log.info(
+                    f"\033[91mGen {result.iteration}: Glider @ "
+                    f"({p.top_left_r}, {p.top_left_c})\033[0m"
+                )
+
         if result.is_stable and self.is_playing:
             self.is_playing = False
             self.controls.force_pause()

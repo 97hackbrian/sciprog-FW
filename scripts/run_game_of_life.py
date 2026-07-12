@@ -50,6 +50,13 @@ def run_headless(engine: SimulationEngine, db_session: Session, run_id: int) -> 
 
             persist_step_result(result, run_id, committer)
 
+            for p in result.detected_patterns:
+                if p.name == "Glider":
+                    log.info(
+                        f"\033[91mGen {result.iteration}: Glider @ "
+                        f"({p.top_left_r}, {p.top_left_c})\033[0m"
+                    )
+
             if result.iteration % 100 == 0:
                 log.info(f"Iteration {result.iteration}: {result.live_cells} live cells")
 
