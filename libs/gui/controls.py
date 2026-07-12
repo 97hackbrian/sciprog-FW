@@ -19,6 +19,7 @@ class Controls:
         on_speed_change: Any,
         on_boundary_change: Any,
         on_backend_change: Any,
+        on_all_cores_change: Any,
     ) -> None:
         self.on_play_pause = on_play_pause
         self.on_step = on_step
@@ -26,6 +27,7 @@ class Controls:
         self.on_speed_change = on_speed_change
         self.on_boundary_change = on_boundary_change
         self.on_backend_change = on_backend_change
+        self.on_all_cores_change = on_all_cores_change
 
         with dpg.group(parent=parent, horizontal=False):
             with dpg.group(horizontal=True):
@@ -59,6 +61,12 @@ class Controls:
             )
             self.backend_status = dpg.add_text("Backend: initializing...", color=[200, 200, 200])
 
+            self.all_cores_checkbox = dpg.add_checkbox(
+                label="Use All Cores (Disable P-Core affinity)",
+                default_value=False,
+                callback=self._handle_all_cores_change,
+            )
+
             # Pattern log area
             dpg.add_separator()
             dpg.add_text("Detected Patterns:")
@@ -87,6 +95,10 @@ class Controls:
         selected = ComputeBackend[app_data]
         self.on_backend_change(selected)
 
+    def _handle_all_cores_change(self, sender: Any, app_data: Any, user_data: Any) -> None:
+        """Handle all cores checkbox toggle."""
+        self.on_all_cores_change(bool(app_data))
+
     def set_backend_status(self, text: str) -> None:
         """Update the backend status label below the combo box."""
         dpg.set_value(self.backend_status, text)
@@ -98,6 +110,10 @@ class Controls:
     def force_pause(self) -> None:
         """Force UI to display 'Play' because simulation was paused externally."""
         dpg.configure_item(self.btn_play, label="Play")
+
+    def force_play(self) -> None:
+        """Force UI to display 'Pause' because simulation was resumed externally."""
+        dpg.configure_item(self.btn_play, label="Pause")
 
     def add_patterns(self, iteration: int, patterns: list[Any]) -> None:
         """Add newly detected patterns to the scrolling log."""

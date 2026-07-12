@@ -30,11 +30,13 @@ class GameOfLifeApp:
 
         # Pending backend switch (deferred to main thread)
         self._pending_backend: ComputeBackend | None = None
+        self._pending_all_cores: bool | None = None
 
         dpg.create_context()
         self._setup_window()
         dpg.create_viewport(title="Conway's Game of Life", width=1200, height=800)
         dpg.setup_dearpygui()
+        dpg.set_global_font_scale(1.3)  # Make text and buttons larger
 
     def _setup_window(self) -> None:
         with dpg.window(tag="Primary Window"):
@@ -49,6 +51,13 @@ class GameOfLifeApp:
                         on_speed_change=self.set_speed,
                         on_boundary_change=self.set_boundary,
                         on_backend_change=self._request_backend_switch,
+                        on_all_cores_change=self._request_all_cores_switch,
+                    )
+
+                    # Initialize checkbox state
+                    dpg.set_value(
+                        self.controls.all_cores_checkbox,
+                        getattr(self.config, "all_cores", False),
                     )
 
                     dpg.add_separator(parent="LeftPanel")
@@ -127,10 +136,6 @@ class GameOfLifeApp:
 
         log.info(f"Switching backend to {backend.name}...")
 
-        # Pause the simulation
-        self.is_playing = False
-        self.controls.force_pause()
-
         # Update config
         self.config.backend = backend
         self.engine.config.backend = backend
@@ -142,7 +147,40 @@ class GameOfLifeApp:
         self._update_backend_label()
         self.controls.set_backend_combo(self.config.backend)
 
+        # Ensure it plays automatically after switch
+        self.is_playing = True
+        self.controls.force_play()
+
         log.info(f"Backend switched to {backend.name} successfully.")
+
+    def _request_all_cores_switch(self, all_cores: bool) -> None:
+        """Request a switch of CPU core affinity."""
+        self._pending_all_cores = all_cores
+
+    def _apply_all_cores_switch(self) -> None:
+        """Apply the all cores switch on the main thread."""
+        all_cores = self._pending_all_cores
+        self._pending_all_cores = None
+
+        if all_cores is None:
+            return
+
+        log.info(f"Switching all_cores affinity to: {all_cores}")
+
+        self.config.all_cores = all_cores
+        self.engine.config.all_cores = all_cores
+
+        # Apply process-level affinity immediately
+        from libs.parallel.topology import apply_pcore_affinity
+
+        apply_pcore_affinity(all_cores=all_cores)
+
+        self.reset_sim()
+        self._update_topology_label()
+
+        # Ensure it plays automatically after switch
+        self.is_playing = True
+        self.controls.force_play()
 
     def toggle_play(self) -> bool:
         """Toggle the playing state of the simulation."""
@@ -195,9 +233,11 @@ class GameOfLifeApp:
         dpg.set_primary_window("Primary Window", True)
 
         while dpg.is_dearpygui_running():
-            # Process pending backend switch on the main thread
+            # Process pending switches on the main thread
             if self._pending_backend is not None:
                 self._apply_backend_switch()
+            if self._pending_all_cores is not None:
+                self._apply_all_cores_switch()
 
             current_time = time.time()
             if self.is_playing and (
