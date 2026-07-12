@@ -65,9 +65,8 @@ class GameOfLifeApp:
                         except Exception:
                             self.stats_view.set_backend("GPU (Unknown)")
                     elif isinstance(self.engine.dispatcher, MultiprocessDispatcher):
-                        self.stats_view.set_backend(
-                            f"CPU SciPy (Multi, {self.config.n_workers} workers)"
-                        )
+                        actual_workers = self.engine.dispatcher.pool.n_workers
+                        self.stats_view.set_backend(f"CPU SciPy (Multi, {actual_workers} workers)")
                     elif isinstance(self.engine.dispatcher, NumbaDispatcher):
                         self.stats_view.set_backend("CPU Numba JIT (Multi-threaded)")
                     else:

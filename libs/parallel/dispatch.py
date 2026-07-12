@@ -9,6 +9,7 @@ from typeguard import typechecked
 from libs.config import BoundaryMode, SimulationConfig
 from libs.core.rules import apply_rules, count_neighbors
 from libs.parallel.shared_grid import SharedGridBuffer
+from libs.parallel.topology import get_topology_info
 from libs.parallel.workers import WorkerPool
 
 
@@ -62,16 +63,29 @@ class MultiprocessDispatcher:
     """Multiprocess strategy using shared memory."""
 
     def __init__(self, shape: tuple[int, int], config: SimulationConfig, initial: np.ndarray):
+        import logging
+
+        logger = logging.getLogger(__name__)
+
         self.buffer = SharedGridBuffer(shape)
         self.buffer.load(initial)
         self.boundary_mode = config.boundary_mode
+
+        # Auto-calculate n_workers from CPU topology
+        if config.all_cores:
+            effective_workers = config.n_workers
+        else:
+            p_cores, _ = get_topology_info()
+            effective_workers = len(p_cores)
+
+        logger.info(f"MultiprocessDispatcher using {effective_workers} workers.")
 
         self.pool = WorkerPool(
             current_name=self.buffer.current_shm.name,
             next_name=self.buffer.next_shm.name,
             shape=shape,
             boundary_mode=config.boundary_mode,
-            n_workers=config.n_workers,
+            n_workers=effective_workers,
         )
 
         # Ensure cleanup if process exits unexpectedly
