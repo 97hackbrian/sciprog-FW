@@ -20,7 +20,12 @@ class Controls:
         on_boundary_change: Any,
         on_backend_change: Any,
         on_all_cores_change: Any,
+        max_fps: float,
+        max_pattern_log_items: int = 50,
+        visible_pattern_log_items: int = 6,
     ) -> None:
+        self.max_fps = max_fps
+        self.max_pattern_log_items = max_pattern_log_items
         self.on_play_pause = on_play_pause
         self.on_step = on_step
         self.on_reset = on_reset
@@ -39,7 +44,7 @@ class Controls:
                 label="Speed",
                 default_value=10,
                 min_value=1,
-                max_value=1000,
+                max_value=int(self.max_fps),
                 format="%d Gen/s",
                 callback=self._handle_speed_change,
             )
@@ -70,12 +75,14 @@ class Controls:
             # Pattern log area
             dpg.add_separator()
             dpg.add_text("Detected Patterns:")
-            self.pattern_listbox = dpg.add_listbox(items=[], width=-1, num_items=6)
+            self.pattern_listbox = dpg.add_listbox(
+                items=[], width=-1, num_items=visible_pattern_log_items
+            )
             self._pattern_items: list[str] = []
 
     def _handle_speed_change(self, sender: Any, app_data: Any, user_data: Any) -> None:
         """Handle speed slider changes."""
-        if app_data >= 1000:
+        if app_data >= self.max_fps:
             dpg.configure_item(self.speed_slider, format="MAX (Uncapped)")
             dpg.set_value(self.text_speed_status, "Speed Limit: UNCAPPED (Max Performance)")
             dpg.configure_item(self.text_speed_status, color=[255, 100, 100])
@@ -124,9 +131,9 @@ class Controls:
             msg = f"Gen {iteration}: {p.name} @ ({p.top_left_r}, {p.top_left_c})"
             self._pattern_items.insert(0, msg)
 
-        # Keep only the last 50
-        if len(self._pattern_items) > 50:
-            self._pattern_items = self._pattern_items[:50]
+        # Keep only the max allowed patterns
+        if len(self._pattern_items) > self.max_pattern_log_items:
+            self._pattern_items = self._pattern_items[: self.max_pattern_log_items]
 
         dpg.configure_item(self.pattern_listbox, items=self._pattern_items)
 

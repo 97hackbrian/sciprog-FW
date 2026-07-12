@@ -66,8 +66,8 @@ class GridView:
 class StatsView:
     """Manages the rolling line plot of live cells over time and text readouts."""
 
-    def __init__(self, parent: int | str):
-        self.max_history = 200
+    def __init__(self, parent: int | str, plot_height: int = 150, max_history: int = 200) -> None:
+        self.max_history = max_history
         self.iterations: list[float] = []
         self.live_cells: list[float] = []
 
@@ -80,7 +80,7 @@ class StatsView:
             self.text_time = dpg.add_text("Step Time (ms): 0.00")
             self.text_status = dpg.add_text("Status: Running", color=[0, 255, 0])
 
-            with dpg.plot(label="Population History", height=150, width=-1, no_menus=True):
+            with dpg.plot(label="Population History", height=plot_height, width=-1, no_menus=True):
                 self.x_axis = dpg.add_plot_axis(dpg.mvXAxis, label="Iteration")
                 self.y_axis = dpg.add_plot_axis(dpg.mvYAxis, label="Live Cells")
                 self.line_series = dpg.add_line_series([], [], parent=self.y_axis)

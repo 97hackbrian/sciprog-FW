@@ -34,15 +34,19 @@ class GameOfLifeApp:
 
         dpg.create_context()
         self._setup_window()
-        dpg.create_viewport(title="Conway's Game of Life", width=1200, height=800)
+        dpg.create_viewport(
+            title="Conway's Game of Life",
+            width=self.config.gui_window_width,
+            height=self.config.gui_window_height,
+        )
         dpg.setup_dearpygui()
-        dpg.set_global_font_scale(1.3)  # Make text and buttons larger
+        dpg.set_global_font_scale(self.config.gui_font_scale)
 
     def _setup_window(self) -> None:
         with dpg.window(tag="Primary Window"):
             with dpg.group(horizontal=True):
                 # Left panel: controls and stats
-                with dpg.child_window(width=300, tag="LeftPanel"):
+                with dpg.child_window(width=self.config.gui_panel_width, tag="LeftPanel"):
                     self.controls = Controls(
                         parent="LeftPanel",
                         on_play_pause=self.toggle_play,
@@ -52,6 +56,9 @@ class GameOfLifeApp:
                         on_boundary_change=self.set_boundary,
                         on_backend_change=self._request_backend_switch,
                         on_all_cores_change=self._request_all_cores_switch,
+                        max_fps=self.config.max_fps_limit,
+                        max_pattern_log_items=self.config.gui_pattern_log_max_items,
+                        visible_pattern_log_items=self.config.gui_pattern_log_visible_items,
                     )
 
                     # Initialize checkbox state
@@ -61,7 +68,11 @@ class GameOfLifeApp:
                     )
 
                     dpg.add_separator(parent="LeftPanel")
-                    self.stats_view = StatsView(parent="LeftPanel")
+                    self.stats_view = StatsView(
+                        parent="LeftPanel",
+                        plot_height=self.config.gui_plot_height,
+                        max_history=self.config.gui_plot_max_history,
+                    )
 
                     # Set initial backend and topology labels
                     self._update_backend_label()
@@ -241,7 +252,7 @@ class GameOfLifeApp:
 
             current_time = time.time()
             if self.is_playing and (
-                self.target_fps >= 1000.0
+                self.target_fps >= self.config.max_fps_limit
                 or (current_time - self.last_update_time) >= (1.0 / self.target_fps)
             ):
                 self._do_step()

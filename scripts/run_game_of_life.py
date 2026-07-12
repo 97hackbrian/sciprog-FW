@@ -42,7 +42,7 @@ def persist_step_result(result: Any, run_id: int, committer: BatchedCommitter) -
 def run_headless(engine: SimulationEngine, db_session: Session, run_id: int) -> None:
     """Run the simulation without the GUI, saving to database."""
     log.info("Starting headless simulation loop...")
-    committer = BatchedCommitter(db_session, batch_size=25)
+    committer = BatchedCommitter(db_session, batch_size=engine.config.db_batch_size)
 
     try:
         while True:
@@ -165,7 +165,7 @@ def main() -> None:
             app = GameOfLifeApp(engine=sim_engine, config=config, initial_state=initial_state)
 
             # We persist execution records in GUI mode via a monkeypatch.
-            committer = BatchedCommitter(session, batch_size=25)
+            committer = BatchedCommitter(session, batch_size=config.db_batch_size)
 
             def persist_result(result: Any) -> None:
                 persist_step_result(result, run_record.id, committer)
