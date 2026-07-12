@@ -87,14 +87,15 @@ class GameOfLifeApp:
         self.grid_view.update(self.engine.grid.array)
 
     def _update_backend_label(self) -> None:
-        """Update the stats view backend label based on the current dispatcher."""
-        from libs.parallel.dispatch import (
-            GpuDispatcher,
-            MultiprocessDispatcher,
-            NumbaDispatcher,
-        )
+        """Update the stats view with the actual backend in use."""
+        import cupy as cp  # type: ignore
+
+        from libs.parallel.dispatch import GpuDispatcher, MultiprocessDispatcher, NumbaDispatcher
+
+        is_gpu = False
 
         if isinstance(self.engine.dispatcher, GpuDispatcher):
+            is_gpu = True
             try:
                 import cupy as cp  # type: ignore
 
@@ -113,19 +114,25 @@ class GameOfLifeApp:
 
         self.stats_view.set_backend(label)
         self.controls.set_backend_status(f"Active: {label}")
+        self.controls.set_all_cores_enabled(not is_gpu)
 
     def _update_topology_label(self) -> None:
         """Update the stats view topology label."""
+        from libs.parallel.dispatch import GpuDispatcher
         from libs.parallel.topology import get_topology_info
+
+        if isinstance(self.engine.dispatcher, GpuDispatcher):
+            self.stats_view.set_topology("N/A", visible=False)
+            return
 
         p_cores, e_cores = get_topology_info()
         total = len(p_cores) + len(e_cores)
         if getattr(self.config, "all_cores", False) or not e_cores:
             active = total
-            self.stats_view.set_topology(f"All Cores Active ({active}/{total})")
+            self.stats_view.set_topology(f"All Cores Active ({active}/{total})", visible=True)
         else:
             active = len(p_cores)
-            self.stats_view.set_topology(f"P-Cores Active ({active}/{total})")
+            self.stats_view.set_topology(f"P-Cores Active ({active}/{total})", visible=True)
 
     def _request_backend_switch(self, backend: ComputeBackend) -> None:
         """Request a backend switch. Deferred to main thread to avoid segfaults.
@@ -211,6 +218,7 @@ class GameOfLifeApp:
         self.controls.clear_patterns()
         self.grid_view.update(self.engine.grid.array)
         self._update_backend_label()
+        self._update_topology_label()
 
     def set_speed(self, speed: float) -> None:
         """Set the target frames per second."""
@@ -224,7 +232,7 @@ class GameOfLifeApp:
 
     def _do_step(self) -> None:
         result = self.engine.step()
-        self.grid_view.update(self.engine.grid.array)
+        self.grid_view.update(self.engine.grid.array, result.detected_patterns)
         self.stats_view.update(
             result.iteration,
             result.live_cells,

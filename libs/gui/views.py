@@ -1,5 +1,7 @@
 """Dear PyGui views for the Game of Life."""
 
+from typing import Any
+
 import dearpygui.dearpygui as dpg  # type: ignore[import-untyped]
 import numpy as np
 
@@ -36,7 +38,7 @@ class GridView:
                 rows=rows,
                 cols=cols,
                 scale_min=0,
-                scale_max=1,
+                scale_max=2,
                 parent=self.y_axis,
                 format="",
             )
@@ -45,22 +47,30 @@ class GridView:
             with dpg.colormap_registry():
                 self.colormap = dpg.add_colormap(
                     [
-                        [20, 20, 20, 255],  # Dead: Dark gray/black
-                        [0, 255, 100, 255],  # Alive: Bright green
+                        [20, 20, 20, 255],  # 0: Dead: Dark gray/black
+                        [0, 255, 100, 255],  # 1: Alive: Bright green
+                        [255, 50, 50, 255],  # 2: Glider: Red
                     ],
                     qualitative=True,
                 )
                 dpg.bind_colormap(self.plot_id, self.colormap)
 
-    def update(self, grid_array: np.ndarray) -> None:
-        """Update the heat series with the new grid data."""
-        # Convert uint8 to float, flatten.
-        # Dear PyGui's heat series expects a flat list of floats.
-        # We might need to flip the array depending on coordinate systems.
-        # Often, dpg expects data row by row from top to bottom or bottom to top.
-        # Assuming standard top-left to bottom-right flattened:
-        flat_data = grid_array.flatten().astype(float).tolist()
-        dpg.set_value(self.series_id, [flat_data, [0.0, 1.0]])
+    def update(self, grid: np.ndarray, detected_patterns: list[Any] | None = None) -> None:
+        """Update the texture with the latest grid state."""
+        display_grid = grid.astype(float).copy()
+
+        if detected_patterns:
+            for p in detected_patterns:
+                if p.name == "Glider":
+                    for r, c in p.cells:
+                        pr = p.top_left_r + r
+                        pc = p.top_left_c + c
+                        if 0 <= pr < self.rows and 0 <= pc < self.cols:
+                            display_grid[pr, pc] = 2.0
+
+        # Convert to float and flatten for DPG heat series
+        flat_data = display_grid.flatten().tolist()
+        dpg.set_value(self.series_id, [flat_data, [0.0, 2.0]])
 
 
 class StatsView:
@@ -122,6 +132,10 @@ class StatsView:
         """Update the backend text readout."""
         dpg.set_value(self.text_backend, f"Backend: {text}")
 
-    def set_topology(self, text: str) -> None:
+    def set_topology(self, text: str, visible: bool = True) -> None:
         """Update the topology text readout."""
         dpg.set_value(self.text_topology, f"Topology: {text}")
+        if visible:
+            dpg.show_item(self.text_topology)
+        else:
+            dpg.hide_item(self.text_topology)

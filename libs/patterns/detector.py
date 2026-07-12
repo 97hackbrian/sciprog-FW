@@ -20,6 +20,7 @@ class PatternMatch:
     name: str
     top_left_r: int
     top_left_c: int
+    cells: frozenset[tuple[int, int]]
 
 
 @typechecked
@@ -117,7 +118,10 @@ class PatternDetector:
 
             if matched_name:
                 match = PatternMatch(
-                    name=matched_name, top_left_r=top_left_r, top_left_c=top_left_c
+                    name=matched_name,
+                    top_left_r=top_left_r,
+                    top_left_c=top_left_c,
+                    cells=component_cells,
                 )
                 matches.append(match)
 

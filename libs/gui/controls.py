@@ -72,13 +72,22 @@ class Controls:
                 callback=self._handle_all_cores_change,
             )
 
+            # Themes for explicitly coloring the checkbox text
+            with dpg.theme() as self.disabled_theme:
+                with dpg.theme_component(dpg.mvCheckbox):
+                    dpg.add_theme_color(dpg.mvThemeCol_Text, [100, 100, 100, 255])
+
+            with dpg.theme() as self.enabled_theme:
+                with dpg.theme_component(dpg.mvCheckbox):
+                    dpg.add_theme_color(dpg.mvThemeCol_Text, [200, 200, 200, 255])
+
             # Pattern log area
             dpg.add_separator()
             dpg.add_text("Detected Patterns:")
-            self.pattern_listbox = dpg.add_listbox(
-                items=[], width=-1, num_items=visible_pattern_log_items
+            self.pattern_log_container = dpg.add_child_window(
+                width=-1, height=visible_pattern_log_items * 20
             )
-            self._pattern_items: list[str] = []
+            self._pattern_items: list[tuple[str, bool]] = []
 
     def _handle_speed_change(self, sender: Any, app_data: Any, user_data: Any) -> None:
         """Handle speed slider changes."""
@@ -106,6 +115,15 @@ class Controls:
         """Handle all cores checkbox toggle."""
         self.on_all_cores_change(bool(app_data))
 
+    def set_all_cores_enabled(self, enabled: bool) -> None:
+        """Enable or disable the all cores checkbox."""
+        dpg.configure_item(self.all_cores_checkbox, enabled=enabled)
+        if not enabled:
+            dpg.set_value(self.all_cores_checkbox, False)
+            dpg.bind_item_theme(self.all_cores_checkbox, self.disabled_theme)
+        else:
+            dpg.bind_item_theme(self.all_cores_checkbox, self.enabled_theme)
+
     def set_backend_status(self, text: str) -> None:
         """Update the backend status label below the combo box."""
         dpg.set_value(self.backend_status, text)
@@ -129,15 +147,21 @@ class Controls:
 
         for p in patterns:
             msg = f"Gen {iteration}: {p.name} @ ({p.top_left_r}, {p.top_left_c})"
-            self._pattern_items.insert(0, msg)
+            self._pattern_items.insert(0, (msg, p.name == "Glider"))
 
         # Keep only the max allowed patterns
         if len(self._pattern_items) > self.max_pattern_log_items:
             self._pattern_items = self._pattern_items[: self.max_pattern_log_items]
 
-        dpg.configure_item(self.pattern_listbox, items=self._pattern_items)
+        self._render_pattern_log()
+
+    def _render_pattern_log(self) -> None:
+        dpg.delete_item(self.pattern_log_container, children_only=True)
+        for msg, is_glider in self._pattern_items:
+            color = [255, 50, 50, 255] if is_glider else [200, 200, 200, 255]
+            dpg.add_text(msg, color=color, parent=self.pattern_log_container)
 
     def clear_patterns(self) -> None:
         """Clear the pattern log."""
         self._pattern_items.clear()
-        dpg.configure_item(self.pattern_listbox, items=self._pattern_items)
+        self._render_pattern_log()
