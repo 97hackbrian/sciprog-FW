@@ -42,9 +42,9 @@ class SimulationConfig:
     pattern_detection_interval: int = 1
     db_path: Path = field(default_factory=lambda: Path("data/gol.sqlite"))
     log_level: int = logging.INFO
-    gui_window_width: int = 1200
-    gui_window_height: int = 800
-    gui_panel_width: int = 300
+    gui_window_width: int = 1700
+    gui_window_height: int = 1150
+    gui_panel_width: int = 450
     gui_plot_height: int = 250
     gui_plot_max_history: int = 200
     gui_font_scale: float = 1.3
