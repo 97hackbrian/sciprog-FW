@@ -85,7 +85,7 @@ class Controls:
             dpg.add_separator()
             dpg.add_text("Detected Patterns:")
             self.pattern_log_container = dpg.add_child_window(
-                width=-1, height=visible_pattern_log_items * 20
+                width=-1, height=visible_pattern_log_items * 28
             )
             self._pattern_items: list[tuple[str, bool]] = []
 
@@ -148,6 +148,9 @@ class Controls:
         for p in patterns:
             msg = f"Gen {iteration}: {p.name} @ ({p.top_left_r}, {p.top_left_c})"
             self._pattern_items.insert(0, (msg, p.name == "Glider"))
+
+        # Sort so that Gliders always stay at the top (True sorts before False)
+        self._pattern_items.sort(key=lambda item: not item[1])
 
         # Keep only the max allowed patterns
         if len(self._pattern_items) > self.max_pattern_log_items:

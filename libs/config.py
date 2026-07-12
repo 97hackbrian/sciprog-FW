@@ -49,7 +49,7 @@ class SimulationConfig:
     gui_plot_max_history: int = 200
     gui_font_scale: float = 1.3
     gui_pattern_log_max_items: int = 50
-    gui_pattern_log_visible_items: int = 6
+    gui_pattern_log_visible_items: int = 8
     db_batch_size: int = 25
 
     @classmethod

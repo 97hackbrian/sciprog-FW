@@ -31,6 +31,8 @@ class GameOfLifeApp:
         # Pending backend switch (deferred to main thread)
         self._pending_backend: ComputeBackend | None = None
         self._pending_all_cores: bool | None = None
+        self._pending_boundary: BoundaryMode | None = None
+        self._pending_reset: bool = False
 
         dpg.create_context()
         self._setup_window()
@@ -51,9 +53,9 @@ class GameOfLifeApp:
                         parent="LeftPanel",
                         on_play_pause=self.toggle_play,
                         on_step=self.step_once,
-                        on_reset=self.reset_sim,
+                        on_reset=self.request_reset,
                         on_speed_change=self.set_speed,
-                        on_boundary_change=self.set_boundary,
+                        on_boundary_change=self.request_boundary_switch,
                         on_backend_change=self._request_backend_switch,
                         on_all_cores_change=self._request_all_cores_switch,
                         max_fps=self.config.max_fps_limit,
@@ -224,11 +226,35 @@ class GameOfLifeApp:
         """Set the target frames per second."""
         self.target_fps = speed
 
-    def set_boundary(self, mode: BoundaryMode) -> None:
-        """Change the boundary mode and reset the simulation."""
+    def request_reset(self) -> None:
+        """Request a reset of the simulation (deferred to main thread)."""
+        self._pending_reset = True
+        self.controls.force_pause()
+
+    def _apply_reset(self) -> None:
+        """Apply a pending reset on the main thread."""
+        self._pending_reset = False
+        self.reset_sim()
+
+    def request_boundary_switch(self, mode: BoundaryMode) -> None:
+        """Request a boundary mode change (deferred to main thread)."""
+        self._pending_boundary = mode
+        self.controls.force_pause()
+
+    def _apply_boundary_switch(self) -> None:
+        """Apply a pending boundary mode change on the main thread."""
+        mode = self._pending_boundary
+        self._pending_boundary = None
+        if mode is None:
+            return
+
+        log.info(f"Switching boundary mode to {mode.name}...")
         self.config.boundary_mode = mode
         self.engine.config.boundary_mode = mode
         self.reset_sim()
+
+        self.is_playing = True
+        self.controls.force_play()
 
     def _do_step(self) -> None:
         result = self.engine.step()
@@ -265,6 +291,10 @@ class GameOfLifeApp:
                 self._apply_backend_switch()
             if self._pending_all_cores is not None:
                 self._apply_all_cores_switch()
+            if self._pending_boundary is not None:
+                self._apply_boundary_switch()
+            if self._pending_reset:
+                self._apply_reset()
 
             current_time = time.time()
             if self.is_playing and (
