@@ -14,6 +14,7 @@ from libs.config import SimulationConfig
 from libs.core.engine import SimulationEngine
 from libs.gui.app import GameOfLifeApp
 from libs.logging_config import configure_logging
+from libs.parallel.topology import apply_pcore_affinity
 from libs.persistence.database import (
     BatchedCommitter,
     create_run_record,
@@ -77,18 +78,28 @@ def main() -> None:
     parser.add_argument(
         "--backend",
         type=str,
-        choices=["auto", "cpu", "gpu"],
+        choices=["auto", "cpu", "gpu", "numba"],
         default=None,
         help="Compute backend to use",
+    )
+    parser.add_argument(
+        "--all-cores",
+        action="store_true",
+        help="Use all available cores (bypasses P-core restriction)",
     )
     args = parser.parse_args()
 
     # Load configuration
     config = SimulationConfig.load(args.config)
+    config.all_cores = args.all_cores
+
     if args.backend:
         from libs.config import ComputeBackend
 
         config.backend = ComputeBackend[args.backend.upper()]
+
+    # Apply CPU topology affinity (if on hybrid CPU and not bypassed)
+    apply_pcore_affinity(config.all_cores)
 
     # Configure logging
     log_dir = Path("logs")

@@ -12,6 +12,8 @@ dependencies = [
     "typeguard==4.5.2",
     "coloredlogs==15.0.1",
     "humanize==4.16.0",
+    "psutil==7.2.2",
+    "numba==0.65.1",
 ]
 
 [tool.ruff]

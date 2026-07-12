@@ -48,7 +48,12 @@ class GameOfLifeApp:
                     self.stats_view = StatsView(parent="LeftPanel")
 
                     # Set the backend label
-                    from libs.parallel.dispatch import GpuDispatcher, MultiprocessDispatcher
+                    from libs.parallel.dispatch import (
+                        GpuDispatcher,
+                        MultiprocessDispatcher,
+                        NumbaDispatcher,
+                    )
+                    from libs.parallel.topology import get_topology_info
 
                     if isinstance(self.engine.dispatcher, GpuDispatcher):
                         try:
@@ -60,9 +65,23 @@ class GameOfLifeApp:
                         except Exception:
                             self.stats_view.set_backend("GPU (Unknown)")
                     elif isinstance(self.engine.dispatcher, MultiprocessDispatcher):
-                        self.stats_view.set_backend(f"CPU (Multi, {self.config.n_workers} workers)")
+                        self.stats_view.set_backend(
+                            f"CPU SciPy (Multi, {self.config.n_workers} workers)"
+                        )
+                    elif isinstance(self.engine.dispatcher, NumbaDispatcher):
+                        self.stats_view.set_backend("CPU Numba JIT (Multi-threaded)")
                     else:
-                        self.stats_view.set_backend("CPU (Single Process)")
+                        self.stats_view.set_backend("CPU SciPy (Single Process)")
+
+                    # Set the topology label
+                    p_cores, e_cores = get_topology_info()
+                    total = len(p_cores) + len(e_cores)
+                    if getattr(self.config, "all_cores", False) or not e_cores:
+                        active = total
+                        self.stats_view.set_topology(f"All Cores Active ({active}/{total})")
+                    else:
+                        active = len(p_cores)
+                        self.stats_view.set_topology(f"P-Cores Active ({active}/{total})")
 
                 # Right panel: grid
                 with dpg.child_window():

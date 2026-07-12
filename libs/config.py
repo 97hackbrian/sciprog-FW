@@ -23,6 +23,7 @@ class ComputeBackend(Enum):
     AUTO = auto()
     CPU = auto()
     GPU = auto()
+    NUMBA = auto()
 
 
 @typechecked
@@ -34,6 +35,7 @@ class SimulationConfig:
     backend: ComputeBackend = ComputeBackend.AUTO
     target_generations_per_second: float = 10.0
     multiprocessing_threshold_cells: int = 10000
+    all_cores: bool = False
     n_workers: int = field(default_factory=lambda: max(1, os.cpu_count() or 1 - 1))
     enable_extended_pattern_catalog: bool = True
     pattern_detection_interval: int = 1

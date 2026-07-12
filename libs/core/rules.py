@@ -15,6 +15,11 @@ except ImportError:
     cp = None
     cp_convolve = None
 
+try:
+    import numba as nb  # type: ignore
+except ImportError:
+    nb = None
+
 # 3x3 kernel, center is 0 so a cell does not count itself as a neighbor
 NEIGHBOR_KERNEL_CPU: np.ndarray = np.array(
     [
@@ -65,3 +70,64 @@ def apply_rules(grid_array: Any, neighbor_counts: Any) -> Any:
         return cp.where(survive | birth, 1, 0).astype(cp.uint8)
     else:
         return np.where(survive | birth, 1, 0).astype(np.uint8)
+
+
+# --- Numba Implementations ---
+
+if nb is not None:
+
+    @nb.njit(parallel=True, fastmath=True)
+    def numba_step_toroidal(grid: np.ndarray) -> np.ndarray:
+        """Compute the next generation using Numba on CPU with toroidal boundary."""
+        rows, cols = grid.shape
+        next_grid = np.zeros_like(grid)
+        for r in nb.prange(rows):
+            for c in range(cols):
+                live_neighbors = 0
+                for i in range(-1, 2):
+                    for j in range(-1, 2):
+                        if i == 0 and j == 0:
+                            continue
+                        rr = (r + i) % rows
+                        cc = (c + j) % cols
+                        live_neighbors += grid[rr, cc]
+
+                is_alive = grid[r, c] == 1
+                if is_alive and (live_neighbors == 2 or live_neighbors == 3):
+                    next_grid[r, c] = 1
+                elif not is_alive and live_neighbors == 3:
+                    next_grid[r, c] = 1
+        return next_grid
+
+    @nb.njit(parallel=True, fastmath=True)
+    def numba_step_bounded(grid: np.ndarray) -> np.ndarray:
+        """Compute the next generation using Numba on CPU with bounded boundary."""
+        rows, cols = grid.shape
+        next_grid = np.zeros_like(grid)
+        for r in nb.prange(rows):
+            for c in range(cols):
+                live_neighbors = 0
+                for i in range(-1, 2):
+                    for j in range(-1, 2):
+                        if i == 0 and j == 0:
+                            continue
+                        rr = r + i
+                        cc = c + j
+                        if 0 <= rr < rows and 0 <= cc < cols:
+                            live_neighbors += grid[rr, cc]
+
+                is_alive = grid[r, c] == 1
+                if is_alive and (live_neighbors == 2 or live_neighbors == 3):
+                    next_grid[r, c] = 1
+                elif not is_alive and live_neighbors == 3:
+                    next_grid[r, c] = 1
+        return next_grid
+else:
+
+    def numba_step_toroidal(grid: np.ndarray) -> np.ndarray:
+        """Fallback for when numba is not installed."""
+        raise ImportError("Numba is not installed")
+
+    def numba_step_bounded(grid: np.ndarray) -> np.ndarray:
+        """Fallback for when numba is not installed."""
+        raise ImportError("Numba is not installed")

@@ -126,6 +126,30 @@ class GpuDispatcher:
 
 
 @typechecked
+class NumbaDispatcher:
+    """Numba JIT-compiled CPU strategy using multi-threading."""
+
+    def __init__(self, boundary_mode: BoundaryMode):
+        self.boundary_mode = boundary_mode
+
+    def step(self, grid_array: np.ndarray) -> tuple[np.ndarray, int, int]:
+        """Compute next generation using Numba JIT."""
+        from libs.core.rules import numba_step_bounded, numba_step_toroidal
+
+        if self.boundary_mode == BoundaryMode.TOROIDAL:
+            next_arr = numba_step_toroidal(grid_array)
+        else:
+            next_arr = numba_step_bounded(grid_array)
+
+        live, dead = _compute_stats(next_arr, is_gpu=False)
+        return next_arr, live, dead
+
+    def shutdown(self) -> None:
+        """No special resources to release for Numba."""
+        pass
+
+
+@typechecked
 def get_dispatcher(
     shape: tuple[int, int], config: SimulationConfig, initial: np.ndarray
 ) -> Dispatcher:
@@ -146,6 +170,9 @@ def get_dispatcher(
 
     if use_gpu:
         return GpuDispatcher(config, initial)
+
+    if config.backend == ComputeBackend.NUMBA:
+        return NumbaDispatcher(config.boundary_mode)
 
     total_cells = shape[0] * shape[1]
     if total_cells < config.multiprocessing_threshold_cells:

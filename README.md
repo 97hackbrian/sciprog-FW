@@ -41,9 +41,13 @@ python scripts/run_game_of_life.py --initial data/initial.pkl
 # Run headlessly (no GUI, good for servers)
 python scripts/run_game_of_life.py --headless
 
-# Force specific compute backend (auto, cpu, gpu)
+# Force specific compute backend (auto, cpu, gpu, numba)
 python scripts/run_game_of_life.py --backend cpu
 python scripts/run_game_of_life.py --backend gpu
+python scripts/run_game_of_life.py --backend numba
+
+# Bypass P-core restriction on hybrid CPUs
+python scripts/run_game_of_life.py --backend cpu --all-cores
 ```
 
 **Generating Initial States:**
@@ -103,9 +107,12 @@ ruff format --check .      # Run the formatter (dry-run)
 ## Architecture Summary
 The project follows a flat, clean architecture (`libs/`, `scripts/`, `data/`) designed for testability and separation of concerns. The core engine (`libs/core/`) operates headlessly and independently of the GUI (`libs/gui/`) and persistence (`libs/persistence/`) layers. Pattern detection (`libs/patterns/`) handles identifying known structures via connected components, and the multiprocessing module (`libs/parallel/`) provides seamless shared-memory parallelism.
 
-## Hardware Testing Environment
+## Hardware Testing Environment & OS Compatibility
+> [!IMPORTANT]
+> **OS Compatibility:** The entire project was developed and rigorously tested on Linux, but all implementations (both new and existing) are fully cross-platform compatible with Windows.
+
 The performance benchmarks and multi-processing threshold crossover points (as seen in `performance_analysis.ipynb`) were evaluated on the following hardware configuration:
-- **OS**: Ubuntu noble 24.04 x86_64
+- **OS**: Ubuntu noble 24.04 x86_64 (Fully compatible with Windows 10/11)
 - **CPU**: 13th Gen Intel(R) Core(TM) i9-13950HX (32 threads @ 5.50 GHz)
 - **RAM**: 32 GB
 - **GPU (Compute)**: NVIDIA GeForce RTX 4060 Max-Q / Mobile [Discrete]
@@ -132,3 +139,7 @@ The performance benchmarks and multi-processing threshold crossover points (as s
 ### 5. GPU Acceleration via CuPy
 **Challenge**: To drastically improve performance for very large grids without disrupting the GUI or testing framework, while supporting systems without GPUs.
 **Solution**: Implemented a `GpuDispatcher` using CuPy (`cupy` and `cupyx.scipy.ndimage.convolve`) which computes generation steps entirely on the GPU. The `run_game_of_life.py` entrypoint was enhanced with a `--backend {auto, cpu, gpu}` flag. The application defaults to `auto`, which safely falls back to NumPy CPU execution if an Nvidia GPU or CuPy dependencies are not detected.
+
+### 6. CPU Topology (P-Cores vs E-Cores) & Numba Acceleration
+**Challenge**: On hybrid processors (like Intel 13th Gen), synchronous `multiprocessing` processes get severely bottlenecked when the OS scheduler assigns chunks to slower E-Cores. The fast P-Cores sleep waiting for the E-Cores to finish.
+**Solution**: Implemented a cross-platform (Linux/Windows) topology scanner (`libs/parallel/topology.py`) utilizing `/sys/devices/system/cpu/` and `psutil` to isolate High-Performance (P-Cores). Process affinity is strictly bound to P-Cores to maximize synchronous frame rates. Additionally, an opt-in `--backend numba` flag was added to JIT-compile the Conway loops using LLVM for comparison.
