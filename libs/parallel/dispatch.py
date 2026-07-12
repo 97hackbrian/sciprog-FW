@@ -154,7 +154,11 @@ def get_dispatcher(
     shape: tuple[int, int], config: SimulationConfig, initial: np.ndarray
 ) -> Dispatcher:
     """Return the appropriate dispatcher based on config and grid size."""
+    import logging
+
     from libs.config import ComputeBackend
+
+    logger = logging.getLogger(__name__)
 
     use_gpu = False
     if config.backend == ComputeBackend.GPU:
@@ -169,10 +173,22 @@ def get_dispatcher(
             pass
 
     if use_gpu:
-        return GpuDispatcher(config, initial)
+        try:
+            return GpuDispatcher(config, initial)
+        except Exception as e:
+            logger.warning(
+                f"Failed to initialize GPU dispatcher: {e}. Falling back to CPU Numba backend."
+            )
+            config.backend = ComputeBackend.NUMBA
 
     if config.backend == ComputeBackend.NUMBA:
-        return NumbaDispatcher(config.boundary_mode)
+        try:
+            return NumbaDispatcher(config.boundary_mode)
+        except Exception as e:
+            logger.warning(
+                f"Failed to initialize Numba dispatcher: {e}. Falling back to CPU SciPy backend."
+            )
+            config.backend = ComputeBackend.CPU
 
     total_cells = shape[0] * shape[1]
     if total_cells < config.multiprocessing_threshold_cells:
