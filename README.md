@@ -40,8 +40,8 @@
 - **Efficient Core Engine**: Uses `scipy.ndimage.convolve` for fast neighbor counting.
 - **Adaptive Backend**: Automatically runs on GPU (`cupy`) if Nvidia hardware is available, or gracefully falls back to CPU (`numpy` / `numba`).
 - **Adaptive Multiprocessing**: Automatically switches to shared-memory multiprocessing for large grids on the CPU, eliminating the overhead of process creation and array pickling.
-- **Real-time GUI**: Built with Dear PyGui for GPU-accelerated immediate mode rendering.
-- **Pattern Detection**: Detects and logs known patterns (Gliders, Oscillators, Still Lifes) using connected component analysis.
+- **Real-time GUI & Visual Profiling**: Built with Dear PyGui for GPU-accelerated immediate mode rendering. Features dual real-time plots tracking population dynamics and precise computation step-times (ms) to visually profile CPU scheduling performance.
+- **Pattern Detection**: Detects and logs known patterns (Gliders, Oscillators, Still Lifes) using connected component analysis. The UI automatically bubbles high-priority structures (like Gliders) to the top of logs and highlights them.
 - **Data Persistence**: Saves execution statistics to a local SQLite database using SQLAlchemy 2.0.
 
 ---
@@ -183,6 +183,7 @@ The performance benchmarks and multi-processing threshold crossover points (as s
 **Challenge**: Naive multiprocessing (spawning a Pool and using `map` per generation) introduces massive overhead from process creation and pickling full NumPy arrays, typically resulting in a net loss of performance for most grid sizes.
 **Solution**: Implemented a persistent `ProcessPoolExecutor` with double-buffered shared memory (`multiprocessing.shared_memory`). Worker processes attach to the memory blocks once on initialization. For each generation, they only receive small index ranges, read from the `current` block (with necessary halo rows), compute the rules via `scipy.ndimage.convolve`, and write directly to the `next` block. This eliminates process creation and serialization overhead completely.
 **Cleanup Safety**: Posix shared memory segments leak if not explicitly unlinked. The implementation guarantees cleanup by using a context manager (`SharedGridBuffer`) where the owning process uniquely calls `unlink()`.
+**Thread-Safety**: All GUI-driven multiprocessing pool resets (e.g. boundary mode switches) are strictly deferred to the main event loop to prevent `RuntimeError` concurrency crashes against background rendering threads.
 
 #### 2. Pattern Catalog Transcription Risk
 **Challenge**: Hand-transcribing patterns (like the Pulsar and Pentadecathlon) to RLE or ASCII grids carries a high risk of subtle errors, which could invalidate pattern detection.
@@ -202,7 +203,7 @@ The performance benchmarks and multi-processing threshold crossover points (as s
 
 #### 6. CPU Topology (P-Cores vs E-Cores) & Numba Acceleration
 **Challenge**: On hybrid processors (like Intel 13th Gen), synchronous `multiprocessing` processes get severely bottlenecked when the OS scheduler assigns chunks to slower E-Cores. The fast P-Cores sleep waiting for the E-Cores to finish ("the weakest link problem").
-**Solution**: Implemented a cross-platform (Linux/Windows) topology scanner (`libs/parallel/topology.py`) utilizing `/sys/devices/system/cpu/` and `psutil` to isolate High-Performance (P-Cores). Process affinity is strictly bound to P-Cores to maximize synchronous frame rates. Additionally, an opt-in `--backend numba` flag was added to JIT-compile the Conway loops using LLVM natively in multithreading mode, completely bypassing the IPC overhead of SciPy multiprocessing.
+**Solution**: Implemented a cross-platform (Linux/Windows) topology scanner (`libs/parallel/topology.py`) utilizing `/sys/devices/system/cpu/` and `psutil` to isolate High-Performance (P-Cores). Process affinity is strictly bound to P-Cores to maximize synchronous frame rates. Additionally, an opt-in `--backend numba` flag was added to JIT-compile the Conway loops using LLVM natively in multithreading mode, completely bypassing the IPC overhead of SciPy multiprocessing. A real-time "Performance History" graph in the GUI visually exposes the micro-stutter latency caused by E-Cores versus the flat-line stability of P-Core affinity.
 
 #### 7. Exhaustive Performance Findings
 An exhaustive ablation study (`notebooks/performance_analysis.ipynb`) evaluated all permutations of grid sizes, backends, and CPU core affinities with fixed random seeds for absolute repeatability.
