@@ -1,14 +1,17 @@
 """Main GUI application."""
 
+import logging
 import time
 from typing import Any
 
 import dearpygui.dearpygui as dpg  # type: ignore[import-untyped]
 
-from libs.config import BoundaryMode, SimulationConfig
+from libs.config import BoundaryMode, ComputeBackend, SimulationConfig
 from libs.core.engine import SimulationEngine
 from libs.gui.controls import Controls
 from libs.gui.views import GridView, StatsView
+
+log = logging.getLogger(__name__)
 
 
 class GameOfLifeApp:
@@ -24,6 +27,9 @@ class GameOfLifeApp:
         self.is_playing = True
         self.target_fps = config.target_generations_per_second
         self.last_update_time = time.time()
+
+        # Pending backend switch (deferred to main thread)
+        self._pending_backend: ComputeBackend | None = None
 
         dpg.create_context()
         self._setup_window()
@@ -42,45 +48,15 @@ class GameOfLifeApp:
                         on_reset=self.reset_sim,
                         on_speed_change=self.set_speed,
                         on_boundary_change=self.set_boundary,
+                        on_backend_change=self._request_backend_switch,
                     )
 
                     dpg.add_separator(parent="LeftPanel")
                     self.stats_view = StatsView(parent="LeftPanel")
 
-                    # Set the backend label
-                    from libs.parallel.dispatch import (
-                        GpuDispatcher,
-                        MultiprocessDispatcher,
-                        NumbaDispatcher,
-                    )
-                    from libs.parallel.topology import get_topology_info
-
-                    if isinstance(self.engine.dispatcher, GpuDispatcher):
-                        try:
-                            import cupy as cp  # type: ignore
-
-                            props = cp.cuda.runtime.getDeviceProperties(0)
-                            model = props["name"].decode("utf-8")
-                            self.stats_view.set_backend(f"GPU ({model})")
-                        except Exception:
-                            self.stats_view.set_backend("GPU (Unknown)")
-                    elif isinstance(self.engine.dispatcher, MultiprocessDispatcher):
-                        actual_workers = self.engine.dispatcher.pool.n_workers
-                        self.stats_view.set_backend(f"CPU SciPy (Multi, {actual_workers} workers)")
-                    elif isinstance(self.engine.dispatcher, NumbaDispatcher):
-                        self.stats_view.set_backend("CPU Numba JIT (Multi-threaded)")
-                    else:
-                        self.stats_view.set_backend("CPU SciPy (Single Process)")
-
-                    # Set the topology label
-                    p_cores, e_cores = get_topology_info()
-                    total = len(p_cores) + len(e_cores)
-                    if getattr(self.config, "all_cores", False) or not e_cores:
-                        active = total
-                        self.stats_view.set_topology(f"All Cores Active ({active}/{total})")
-                    else:
-                        active = len(p_cores)
-                        self.stats_view.set_topology(f"P-Cores Active ({active}/{total})")
+                    # Set initial backend and topology labels
+                    self._update_backend_label()
+                    self._update_topology_label()
 
                 # Right panel: grid
                 with dpg.child_window():
@@ -89,6 +65,84 @@ class GameOfLifeApp:
 
         # Draw initial state
         self.grid_view.update(self.engine.grid.array)
+
+    def _update_backend_label(self) -> None:
+        """Update the stats view backend label based on the current dispatcher."""
+        from libs.parallel.dispatch import (
+            GpuDispatcher,
+            MultiprocessDispatcher,
+            NumbaDispatcher,
+        )
+
+        if isinstance(self.engine.dispatcher, GpuDispatcher):
+            try:
+                import cupy as cp  # type: ignore
+
+                props = cp.cuda.runtime.getDeviceProperties(0)
+                model = props["name"].decode("utf-8")
+                label = f"GPU ({model})"
+            except Exception:
+                label = "GPU (Unknown)"
+        elif isinstance(self.engine.dispatcher, MultiprocessDispatcher):
+            actual_workers = self.engine.dispatcher.pool.n_workers
+            label = f"CPU SciPy (Multi, {actual_workers} workers)"
+        elif isinstance(self.engine.dispatcher, NumbaDispatcher):
+            label = "CPU Numba JIT (Multi-threaded)"
+        else:
+            label = "CPU SciPy (Single Process)"
+
+        self.stats_view.set_backend(label)
+        self.controls.set_backend_status(f"Active: {label}")
+
+    def _update_topology_label(self) -> None:
+        """Update the stats view topology label."""
+        from libs.parallel.topology import get_topology_info
+
+        p_cores, e_cores = get_topology_info()
+        total = len(p_cores) + len(e_cores)
+        if getattr(self.config, "all_cores", False) or not e_cores:
+            active = total
+            self.stats_view.set_topology(f"All Cores Active ({active}/{total})")
+        else:
+            active = len(p_cores)
+            self.stats_view.set_topology(f"P-Cores Active ({active}/{total})")
+
+    def _request_backend_switch(self, backend: ComputeBackend) -> None:
+        """Request a backend switch. Deferred to main thread to avoid segfaults.
+
+        Dear PyGui callbacks run on a background thread. Numba JIT compilation
+        and multiprocessing pool creation are not safe from non-main threads.
+        We store the request and process it on the main loop.
+        """
+        self._pending_backend = backend
+        self.controls.set_backend_status("Switching...")
+
+    def _apply_backend_switch(self) -> None:
+        """Apply a pending backend switch on the main thread."""
+        backend = self._pending_backend
+        self._pending_backend = None
+
+        if backend is None:
+            return
+
+        log.info(f"Switching backend to {backend.name}...")
+
+        # Pause the simulation
+        self.is_playing = False
+        self.controls.force_pause()
+
+        # Update config
+        self.config.backend = backend
+        self.engine.config.backend = backend
+
+        # Reset the simulation (this shuts down old dispatcher and creates new one)
+        self.reset_sim()
+
+        # Update GUI labels
+        self._update_backend_label()
+        self.controls.set_backend_combo(self.config.backend)
+
+        log.info(f"Backend switched to {backend.name} successfully.")
 
     def toggle_play(self) -> bool:
         """Toggle the playing state of the simulation."""
@@ -107,6 +161,7 @@ class GameOfLifeApp:
         self.stats_view.reset()
         self.controls.clear_patterns()
         self.grid_view.update(self.engine.grid.array)
+        self._update_backend_label()
 
     def set_speed(self, speed: float) -> None:
         """Set the target frames per second."""
@@ -140,6 +195,10 @@ class GameOfLifeApp:
         dpg.set_primary_window("Primary Window", True)
 
         while dpg.is_dearpygui_running():
+            # Process pending backend switch on the main thread
+            if self._pending_backend is not None:
+                self._apply_backend_switch()
+
             current_time = time.time()
             if self.is_playing and (
                 self.target_fps >= 1000.0

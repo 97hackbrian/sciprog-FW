@@ -4,7 +4,7 @@ from typing import Any
 
 import dearpygui.dearpygui as dpg  # type: ignore[import-untyped]
 
-from libs.config import BoundaryMode
+from libs.config import BoundaryMode, ComputeBackend
 
 
 class Controls:
@@ -18,12 +18,14 @@ class Controls:
         on_reset: Any,
         on_speed_change: Any,
         on_boundary_change: Any,
+        on_backend_change: Any,
     ) -> None:
         self.on_play_pause = on_play_pause
         self.on_step = on_step
         self.on_reset = on_reset
         self.on_speed_change = on_speed_change
         self.on_boundary_change = on_boundary_change
+        self.on_backend_change = on_backend_change
 
         with dpg.group(parent=parent, horizontal=False):
             with dpg.group(horizontal=True):
@@ -48,6 +50,15 @@ class Controls:
                 callback=lambda s, a, u: self.on_boundary_change(BoundaryMode[a]),
             )
 
+            backend_items = [b.name for b in ComputeBackend]
+            self.backend_combo = dpg.add_combo(
+                label="Backend",
+                items=backend_items,
+                default_value=ComputeBackend.AUTO.name,
+                callback=self._handle_backend_change,
+            )
+            self.backend_status = dpg.add_text("Backend: initializing...", color=[200, 200, 200])
+
             # Pattern log area
             dpg.add_separator()
             dpg.add_text("Detected Patterns:")
@@ -55,6 +66,7 @@ class Controls:
             self._pattern_items: list[str] = []
 
     def _handle_speed_change(self, sender: Any, app_data: Any, user_data: Any) -> None:
+        """Handle speed slider changes."""
         if app_data >= 1000:
             dpg.configure_item(self.speed_slider, format="MAX (Uncapped)")
             dpg.set_value(self.text_speed_status, "Speed Limit: UNCAPPED (Max Performance)")
@@ -66,8 +78,22 @@ class Controls:
         self.on_speed_change(float(app_data))
 
     def _handle_play_pause(self, sender: Any, app_data: Any, user_data: Any) -> None:
+        """Handle play/pause button click."""
         is_playing = self.on_play_pause()
         dpg.configure_item(self.btn_play, label="Pause" if is_playing else "Play")
+
+    def _handle_backend_change(self, sender: Any, app_data: Any, user_data: Any) -> None:
+        """Handle backend combo box selection."""
+        selected = ComputeBackend[app_data]
+        self.on_backend_change(selected)
+
+    def set_backend_status(self, text: str) -> None:
+        """Update the backend status label below the combo box."""
+        dpg.set_value(self.backend_status, text)
+
+    def set_backend_combo(self, backend: ComputeBackend) -> None:
+        """Set the backend combo box value without triggering the callback."""
+        dpg.set_value(self.backend_combo, backend.name)
 
     def force_pause(self) -> None:
         """Force UI to display 'Play' because simulation was paused externally."""
